@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Pioneer Farms</title>
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Pioneer Farms" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" />
+<style>
+  :root {
+    --paper:#f5f6f8; --card:#ffffff; --ink:#1c2430; --deep:#22304a;
+    --rule:#d6dae1; --muted:#6b7688; --faint:#9aa3b2;
+    --accent:#3f6f6f; --accent-soft:#e6efee; --confirmed:#2f7d54; --confirmed-soft:#e7f1ec;
+    --shadow:0 1px 3px rgba(28,36,48,.08), 0 1px 2px rgba(28,36,48,.04);
+    --serif:'Spectral', Georgia, serif;
+    --sans:-apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    --mono:ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; padding:0; }
+  body {
+    background: var(--paper); color: var(--ink); font-family: var(--sans);
+    font-size: 16px; line-height: 1.5;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 20px 18px 80px; }
+
+  /* header */
+  .top { text-align: center; padding: 8px 0 18px; border-bottom: 2px solid var(--deep); margin-bottom: 22px; }
+  .top h1 { font-family: var(--serif); font-weight: 600; font-size: 27px; letter-spacing: .01em; color: var(--deep); margin: 0; }
+  .top .sub { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
+
+  /* buttons */
+  button { font-family: var(--sans); cursor: pointer; }
+  .btn { background: var(--deep); color: #fff; border: none; border-radius: 9px; padding: 12px 18px; font-size: 15px; font-weight: 600; }
+  .btn:active { opacity: .9; }
+  .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 16px; font-size: 14px; font-weight: 500; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* week list */
+  .list-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .list-head .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+  .week-card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 15px 16px; margin-bottom: 11px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 14px; cursor: pointer; }
+  .week-card:active { border-color: var(--accent); }
+  .week-when { flex: 1; }
+  .week-date { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--deep); }
+  .week-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .week-chev { color: var(--faint); font-size: 20px; }
+  .week-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .week-tag.past { background: #eceef1; color: var(--faint); }
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-family: var(--serif); font-style: italic; font-size: 17px; }
+
+  /* editor */
+  .back-link { background: transparent; border: none; color: var(--accent); font-size: 15px; padding: 0; margin-bottom: 14px; font-weight: 500; }
+  .zone { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 4px 16px 14px; margin-bottom: 18px; box-shadow: var(--shadow); }
+  .zone-head { display: flex; align-items: center; gap: 10px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; }
+  .zone-head h2 { font-family: var(--serif); font-size: 19px; font-weight: 600; color: var(--deep); margin: 0; flex: 1; }
+  .zone-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
+  .badge-public { background: var(--accent-soft); color: var(--accent); }
+  .badge-private { background: #f0e9ef; color: #7a4f74; }
+
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 4px; }
+  .field label { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field textarea {
+    width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: #fff; color: var(--ink);
+    -webkit-appearance: none; appearance: none;
+  }
+  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field textarea { resize: vertical; min-height: 62px; line-height: 1.45; }
+  .field .hint { font-size: 12px; color: var(--faint); margin-top: 4px; font-style: italic; }
+
+  /* speaker rows */
+  .speaker-row { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfd; }
+  .speaker-row .sp-name { margin-bottom: 8px; }
+  .sp-topic label { color: var(--accent); }
+  .sp-topic label::after { content: " · leadership only"; color: var(--faint); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 460px) { .row-2 { grid-template-columns: 1fr; } }
+
+  .add-line { background: transparent; border: 1px dashed var(--rule); color: var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: var(--mono); width: 100%; margin-top: 2px; }
+  .add-line:active { border-color: var(--accent); color: var(--accent); }
+
+  .out-bar { position: sticky; bottom: 0; background: linear-gradient(to top, var(--paper) 65%, transparent); padding: 14px 0 6px; margin-top: 8px; display: flex; gap: 10px; }
+  .out-bar .btn { flex: 1; }
+  .out-bar .btn.secondary { background: var(--accent); }
+
+  .danger { background: transparent; border: none; color: #a3453a; font-size: 13px; margin-top: 6px; padding: 6px; }
+
+  /* ---- print / output view ---- */
+  .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
+  .sheet-overlay.open { display: block; }
+  .sheet-toolbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
+  .sheet-toolbar .btn { padding: 9px 16px; }
+  .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
+  .sheet-scroll { padding: 22px 16px 60px; }
+
+  .doc { max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 40px 44px; box-shadow: var(--shadow); }
+  .doc h1 { font-family: var(--serif); text-align: center; font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 2px; line-height: 1.25; }
+  .doc .doc-ward { font-family: var(--serif); text-align: center; font-size: 16px; color: var(--ink); margin: 0; }
+  .doc .doc-date { text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 26px; }
+  .doc .rule { border: none; border-top: 1px solid var(--rule); margin: 20px 0; }
+  .doc-line { display: flex; gap: 10px; padding: 5px 0; font-size: 15px; align-items: baseline; }
+  .doc-line .dl-label { font-weight: 600; color: var(--deep); min-width: 130px; flex: 0 0 auto; }
+  .doc-line .dl-val { flex: 1; }
+  .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 22px 0 8px; font-weight: 600; }
+  .doc-track { font-size: 15px; line-height: 1.6; margin: 4px 0 12px; }
+  .doc-track .names { font-weight: 600; }
+  .doc-track .say { color: var(--ink); }
+  .doc-track .cue { color: var(--muted); font-style: italic; }
+  .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  @media print {
+    body { background: #fff; }
+    .sheet-toolbar, .wrap { display: none !important; }
+    .sheet-overlay { position: static; }
+    .sheet-scroll { padding: 0; }
+    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.5in; max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<!-- output overlay -->
+<div class="sheet-overlay" id="sheetOverlay">
+  <div class="sheet-toolbar">
+    <button class="close" id="sheetClose">‹ back</button>
+    <button class="btn" id="sheetPrint">Print / Save PDF</button>
+  </div>
+  <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "pioneerfarms-v1";
+  var WARD = "Pioneer Farms Ward";
+
+  var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
+
+  // ---- state ----
+  var state = { weeks: [] };
+  var view = { screen: "list", weekId: null };
+
+  function load() {
+    try { var raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch (e) {}
+    if (!state.weeks) state.weeks = [];
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // ---- week model ----
+  function blankWeek() {
+    return {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      date: nextSundayISO(),
+      conducting: "",
+      openingHymn: "", sacramentHymn: "", restHymn: "", closingHymn: "",
+      invocation: "", benediction: "",
+      musical: "",
+      blessings: "",              // public IF present
+      speakers: [ { name: "", topic: "" }, { name: "", topic: "" } ],
+      youthSpeaker: "", youthTopic: "",
+      testimony: false,           // if true, "Testimony meeting" replaces speakers on the program
+      // ward business (private)
+      releases: "",
+      callings: "",
+      announcements: ""
+    };
+  }
+  function cloneSkeleton(w) {
+    // clone the stable program shell, blank the volatile business + names
+    var c = blankWeek();
+    c.conducting = w.conducting;
+    c.openingHymn = w.openingHymn; c.sacramentHymn = w.sacramentHymn;
+    c.restHymn = w.restHymn; c.closingHymn = w.closingHymn;
+    return c;
+  }
+  function nextSundayISO() {
+    var d = new Date(); d.setHours(0,0,0,0);
+    var add = (7 - d.getDay()) % 7; if (add === 0) add = 7;
+    d.setDate(d.getDate() + add);
+    return d.toISOString().slice(0,10);
+  }
+  function fmtDate(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  }
+  function fmtShort(iso) {
+    if (!iso) return "—";
+    var d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+  function isPast(iso) {
+    var d = new Date(iso + "T23:59:59");
+    return d.getTime() < Date.now();
+  }
+  function findWeek(id) { return state.weeks.filter(function (w) { return w.id === id; })[0]; }
+
+  // ---- render router ----
+  function render() {
+    var app = document.getElementById("app");
+    app.innerHTML = "";
+    app.appendChild(header());
+    if (view.screen === "list") renderList(app);
+    else renderEditor(app);
+  }
+  function header() {
+    var top = el("div", "top");
+    top.appendChild(el("h1", null, "Pioneer Farms"));
+    top.appendChild(el("div", "sub", "ward operations"));
+    return top;
+  }
+
+  // ---- list screen ----
+  function renderList(app) {
+    var head = el("div", "list-head");
+    head.appendChild(el("span", "eyebrow", "Sacrament meetings"));
+    var addBtn = el("button", "btn-ghost", "+ new week");
+    addBtn.onclick = function () {
+      var w;
+      var latest = state.weeks.slice().sort(function (a,b){ return b.date.localeCompare(a.date); })[0];
+      w = latest ? cloneSkeleton(latest) : blankWeek();
+      state.weeks.push(w); save();
+      view = { screen: "editor", weekId: w.id }; render();
+    };
+    head.appendChild(addBtn);
+    app.appendChild(head);
+
+    if (!state.weeks.length) {
+      app.appendChild(el("div", "empty", "No meetings yet. Tap “+ new week” to plan one."));
+      return;
+    }
+    var weeks = state.weeks.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+    // upcoming first (soonest at top), then past below
+    var upcoming = weeks.filter(function (w) { return !isPast(w.date); });
+    var past = weeks.filter(function (w) { return isPast(w.date); }).reverse();
+    upcoming.concat(past).forEach(function (w) {
+      var card = el("div", "week-card");
+      var when = el("div", "week-when");
+      when.appendChild(el("div", "week-date", fmtShort(w.date)));
+      var bits = [];
+      if (w.conducting) bits.push(w.conducting.split(" ")[0] + " conducting");
+      if (w.testimony) bits.push("testimony meeting");
+      else {
+        var named = (w.speakers || []).filter(function (s) { return s.name; }).length + (w.youthSpeaker ? 1 : 0);
+        if (named) bits.push(named + " speaker" + (named === 1 ? "" : "s"));
+      }
+      when.appendChild(el("div", "week-meta", bits.join(" · ") || "not filled in yet"));
+      card.appendChild(when);
+      card.appendChild(el("span", "week-tag" + (isPast(w.date) ? " past" : ""), isPast(w.date) ? "past" : "upcoming"));
+      card.onclick = function () { view = { screen: "editor", weekId: w.id }; render(); };
+      app.appendChild(card);
+    });
+  }
+
+  // ---- editor screen ----
+  function renderEditor(app) {
+    var w = findWeek(view.weekId);
+    if (!w) { view = { screen: "list" }; return render(); }
+
+    var back = el("button", "back-link", "‹ all meetings");
+    back.onclick = function () { save(); view = { screen: "list" }; render(); };
+    app.appendChild(back);
+
+    function bindText(field, key, opts) {
+      opts = opts || {};
+      var f = el("div", "field");
+      var lab = el("label", null, opts.label || key);
+      f.appendChild(lab);
+      var input;
+      if (opts.area) { input = el("textarea"); if (opts.rows) input.rows = opts.rows; }
+      else { input = el("input"); input.type = "text"; }
+      input.value = w[key] || "";
+      if (opts.placeholder) input.placeholder = opts.placeholder;
+      input.oninput = function () { w[key] = input.value; save(); };
+      f.appendChild(input);
+      if (opts.hint) f.appendChild(el("div", "hint", opts.hint));
+      field.appendChild(f);
+      return f;
+    }
+
+    // ===== date + conducting =====
+    var z0 = el("div", "zone");
+    var zh0 = el("div", "zone-head"); zh0.appendChild(el("h2", null, "This meeting")); z0.appendChild(zh0);
+    var df = el("div", "field");
+    df.appendChild(el("label", null, "date"));
+    var dinput = el("input"); dinput.type = "date"; dinput.value = w.date;
+    dinput.onchange = function () { w.date = dinput.value; save(); };
+    df.appendChild(dinput); z0.appendChild(df);
+    // conducting select
+    var cf = el("div", "field");
+    cf.appendChild(el("label", null, "conducting"));
+    var sel = el("select");
+    sel.style.cssText = "width:100%;box-sizing:border-box;font-family:var(--sans);font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:#fff;color:var(--ink);";
+    var optBlank = el("option", null, "—"); optBlank.value = ""; sel.appendChild(optBlank);
+    CONDUCTORS.forEach(function (name) {
+      var o = el("option", null, name); o.value = name; if (w.conducting === name) o.selected = true; sel.appendChild(o);
+    });
+    // allow a custom name already stored
+    if (w.conducting && CONDUCTORS.indexOf(w.conducting) === -1) {
+      var o = el("option", null, w.conducting); o.value = w.conducting; o.selected = true; sel.appendChild(o);
+    }
+    sel.onchange = function () { w.conducting = sel.value; save(); };
+    cf.appendChild(sel); z0.appendChild(cf);
+    app.appendChild(z0);
+
+    // ===== PROGRAM (public) =====
+    var z1 = el("div", "zone");
+    var zh1 = el("div", "zone-head");
+    zh1.appendChild(el("h2", null, "Program"));
+    zh1.appendChild(el("span", "zone-badge badge-public", "goes to ward"));
+    z1.appendChild(zh1);
+
+    bindText(z1, "openingHymn", { label: "opening hymn", placeholder: "141: Jesus, the Very Thought of Thee" });
+    bindText(z1, "invocation", { label: "invocation (opening prayer)" });
+    bindText(z1, "sacramentHymn", { label: "sacrament hymn", placeholder: "177: 'Tis Sweet to Sing the Matchless Love" });
+
+    // testimony toggle
+    var tf = el("div", "field");
+    var tlab = el("label", null, "speakers");
+    tf.appendChild(tlab);
+    var tRow = el("div"); tRow.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
+    var tBtn = el("button", "btn-ghost", w.testimony ? "✓ testimony meeting" : "mark as testimony meeting");
+    if (w.testimony) tBtn.style.cssText = "border-color:var(--accent);color:var(--accent);background:var(--accent-soft);";
+    tBtn.onclick = function () { w.testimony = !w.testimony; save(); render(); };
+    tRow.appendChild(tBtn);
+    tf.appendChild(tRow);
+    z1.appendChild(tf);
+
+    if (!w.testimony) {
+      // youth speaker
+      var ys = el("div", "speaker-row");
+      var ysf = el("div", "field sp-name");
+      ysf.appendChild(el("label", null, "youth speaker"));
+      var ysi = el("input"); ysi.type = "text"; ysi.value = w.youthSpeaker || "";
+      ysi.oninput = function () { w.youthSpeaker = ysi.value; save(); };
+      ysf.appendChild(ysi); ys.appendChild(ysf);
+      var ytf = el("div", "field sp-topic");
+      ytf.appendChild(el("label", null, "topic"));
+      var yti = el("input"); yti.type = "text"; yti.value = w.youthTopic || "";
+      yti.oninput = function () { w.youthTopic = yti.value; save(); };
+      ytf.appendChild(yti); ys.appendChild(ytf);
+      z1.appendChild(ys);
+
+      // adult speakers
+      (w.speakers || []).forEach(function (sp, i) {
+        var row = el("div", "speaker-row");
+        var nf = el("div", "field sp-name");
+        nf.appendChild(el("label", null, "speaker " + (i + 1)));
+        var ni = el("input"); ni.type = "text"; ni.value = sp.name || "";
+        ni.oninput = function () { sp.name = ni.value; save(); };
+        nf.appendChild(ni); row.appendChild(nf);
+        var topf = el("div", "field sp-topic");
+        topf.appendChild(el("label", null, "topic"));
+        var ti = el("input"); ti.type = "text"; ti.value = sp.topic || "";
+        ti.oninput = function () { sp.topic = ti.value; save(); };
+        topf.appendChild(ti); row.appendChild(topf);
+        if (w.speakers.length > 1) {
+          var rm = el("button", "danger", "remove speaker");
+          rm.onclick = function () { w.speakers.splice(i, 1); save(); render(); };
+          row.appendChild(rm);
+        }
+        z1.appendChild(row);
+      });
+      var addSp = el("button", "add-line", "+ add speaker");
+      addSp.onclick = function () { w.speakers.push({ name: "", topic: "" }); save(); render(); };
+      z1.appendChild(addSp);
+    }
+
+    bindText(z1, "restHymn", { label: "rest / intermediate hymn", hint: "leave blank if none — it won't print" });
+    bindText(z1, "closingHymn", { label: "closing hymn", placeholder: "124: Be Still, My Soul" });
+    bindText(z1, "benediction", { label: "benediction (closing prayer)" });
+    bindText(z1, "musical", { label: "musical number", hint: "leave blank if none" });
+    bindText(z1, "blessings", { label: "blessings & confirmations", hint: "leave blank if none — appears on ward program only if filled" });
+
+    app.appendChild(z1);
+
+    // ===== WARD BUSINESS (private) =====
+    var z2 = el("div", "zone");
+    var zh2 = el("div", "zone-head");
+    zh2.appendChild(el("h2", null, "Ward business"));
+    zh2.appendChild(el("span", "zone-badge badge-private", "private — conducting only"));
+    z2.appendChild(zh2);
+
+    bindText(z2, "releases", { label: "releases", area: true, rows: 2, hint: "one per line — names only; the vote-of-thanks script wraps them automatically" });
+    bindText(z2, "callings", { label: "callings / sustainings", area: true, rows: 2, hint: "one per line — name, then calling" });
+    bindText(z2, "announcements", { label: "announcements", area: true, rows: 2, hint: "last-minute is fine — edit right up to Sunday" });
+    app.appendChild(z2);
+
+    // ===== outputs =====
+    var out = el("div", "out-bar");
+    var b1 = el("button", "btn", "Program →");
+    b1.onclick = function () { openSheet(buildProgram(w)); };
+    var b2 = el("button", "btn secondary", "Conducting script →");
+    b2.onclick = function () { openSheet(buildScript(w)); };
+    out.appendChild(b1); out.appendChild(b2);
+    app.appendChild(out);
+
+    var del = el("button", "danger", "delete this meeting");
+    del.style.cssText += "display:block;margin:14px auto 0;";
+    del.onclick = function () {
+      if (del.dataset.armed === "1") {
+        state.weeks = state.weeks.filter(function (x) { return x.id !== w.id; });
+        save(); view = { screen: "list" }; render(); return;
+      }
+      del.dataset.armed = "1"; del.textContent = "tap again to delete";
+      setTimeout(function () { if (del) { del.dataset.armed = "0"; del.textContent = "delete this meeting"; } }, 2500);
+    };
+    app.appendChild(del);
+  }
+
+  // ---- output builders ----
+  function lines(str) {
+    return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function docLine(label, val) {
+    if (!val) return null;
+    var row = el("div", "doc-line");
+    row.appendChild(el("span", "dl-label", label));
+    row.appendChild(el("span", "dl-val", val));
+    return row;
+  }
+
+  function buildProgram(w) {
+    var doc = document.createDocumentFragment();
+    doc.appendChild(el("h1", null, "Sacrament Meeting"));
+    doc.appendChild(el("p", "doc-ward", WARD));
+    doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
+
+    var add = function (n) { if (n) doc.appendChild(n); };
+    add(docLine("Conducting", w.conducting));
+    add(docLine("Opening Hymn", w.openingHymn));
+    add(docLine("Invocation", w.invocation));
+    add(docLine("Blessings & Confirmations", w.blessings));
+    add(docLine("Sacrament Hymn", w.sacramentHymn));
+
+    // speakers
+    if (w.testimony) {
+      add(docLine("Program", "Testimony Meeting"));
+    } else {
+      if (w.youthSpeaker) add(docLine("Youth Speaker", w.youthSpeaker));
+      (w.speakers || []).forEach(function (sp, i) {
+        if (sp.name) add(docLine("Speaker " + (i + 1), sp.name));
+      });
+    }
+    add(docLine("Rest Hymn", w.restHymn));
+    add(docLine("Musical Number", w.musical));
+    add(docLine("Closing Hymn", w.closingHymn));
+    add(docLine("Benediction", w.benediction));
+
+    var wrap = el("div");
+    wrap.appendChild(doc);
+    return wrap;
+  }
+
+  function buildScript(w) {
+    var doc = document.createDocumentFragment();
+    doc.appendChild(el("h1", null, "Conducting Script"));
+    doc.appendChild(el("p", "doc-ward", WARD));
+    doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
+
+    var add = function (n) { if (n) doc.appendChild(n); };
+    add(docLine("Conducting", w.conducting));
+    add(docLine("Opening Hymn", w.openingHymn));
+    add(docLine("Invocation", w.invocation));
+
+    // ---- ward business with word-tracks ----
+    doc.appendChild(el("div", "doc-section-title", "Ward Business"));
+
+    if (w.announcements) {
+      var an = el("div", "doc-track");
+      an.appendChild(el("div", "cue", "Announcements:"));
+      lines(w.announcements).forEach(function (l) {
+        var p = el("div", "say"); p.textContent = "• " + l; an.appendChild(p);
+      });
+      doc.appendChild(an);
+    }
+
+    if (w.releases) {
+      var rel = el("div", "doc-track");
+      var r1 = el("div", "say"); r1.textContent = "“We have extended releases to the following:”"; rel.appendChild(r1);
+      lines(w.releases).forEach(function (l) {
+        var p = el("div", "names"); p.textContent = "   " + l; rel.appendChild(p);
+      });
+      var r2 = el("div", "say"); r2.textContent = "“All those who wish to extend a vote of thanks please manifest it by the uplifted hand. Thank you.”"; rel.appendChild(r2);
+      doc.appendChild(rel);
+    }
+
+    if (w.callings) {
+      var cal = el("div", "doc-track");
+      var c1 = el("div", "say"); c1.textContent = "“We have extended callings to the following, please stand as your name is read:”"; cal.appendChild(c1);
+      lines(w.callings).forEach(function (l) {
+        var p = el("div", "names"); p.textContent = "   " + l; cal.appendChild(p);
+      });
+      var c2 = el("div", "say"); c2.textContent = "“All those who can support these members in their callings, please manifest it by the uplifted hand. Any opposed by the same sign. Thank you.”"; cal.appendChild(c2);
+      doc.appendChild(cal);
+    }
+
+    if (w.blessings) add(docLine("Blessings & Confirmations", w.blessings));
+
+    // sacrament invitation closes the business section
+    var sac = el("div", "doc-track");
+    var sacText = "“We invite your reverence as we begin the Sacrament Ordinance. The congregation will sing hymn #" +
+      (w.sacramentHymn || "___") + ", after which the Aaronic Priesthood will bless & administer the sacrament.”";
+    var sp = el("div", "say"); sp.textContent = sacText; sac.appendChild(sp);
+    doc.appendChild(sac);
+
+    doc.appendChild(el("hr", "rule"));
+
+    // ---- rest of the run of show ----
+    if (w.testimony) {
+      add(docLine("Program", "Testimony Meeting"));
+    } else {
+      if (w.youthSpeaker) add(docLine("Youth Speaker", w.youthSpeaker + (w.youthTopic ? "  —  " + w.youthTopic : "")));
+      (w.speakers || []).forEach(function (sp, i) {
+        if (sp.name) add(docLine("Speaker " + (i + 1), sp.name + (sp.topic ? "  —  " + sp.topic : "")));
+      });
+    }
+    add(docLine("Rest Hymn", w.restHymn));
+    add(docLine("Musical Number", w.musical));
+    add(docLine("Closing Hymn", w.closingHymn));
+    add(docLine("Benediction", w.benediction));
+
+    var wrap = el("div");
+    wrap.appendChild(doc);
+    return wrap;
+  }
+
+  // ---- output overlay ----
+  function openSheet(node) {
+    var host = document.getElementById("sheetDoc");
+    host.innerHTML = "";
+    host.appendChild(node);
+    document.getElementById("sheetOverlay").classList.add("open");
+    document.querySelector(".sheet-scroll").scrollTop = 0;
+  }
+  document.getElementById("sheetClose").onclick = function () {
+    document.getElementById("sheetOverlay").classList.remove("open");
+  };
+  document.getElementById("sheetPrint").onclick = function () { window.print(); };
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
