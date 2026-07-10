@@ -141,17 +141,31 @@
   .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; font-weight: 600; }
   .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
 
-  /* chart script */
-  .chart { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
-  .chart td, .chart th { text-align: left; vertical-align: top; padding: 6px 8px; font-size: 14px; border-bottom: 1px solid #e9ecf0; }
-  .chart th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-bottom: 1.5px solid var(--rule); }
-  .chart .c-item { font-weight: 600; color: var(--deep); width: 34%; }
-  .chart .c-who { width: 34%; }
-  .chart .c-detail { color: var(--muted); }
-  .chart tr.spacer td { border-bottom: none; height: 6px; padding: 0; }
-  .biz { font-size: 13.5px; line-height: 1.5; margin: 2px 0 6px; }
-  .biz .cue { color: var(--muted); font-style: italic; }
-  .biz .names { font-weight: 600; color: var(--deep); }
+  /* ---- conducting sheet ---- */
+  .cs { max-width: 680px; margin: 0 auto; }
+  .cs-title { text-align: center; font-family: var(--sans); font-size: 21px; font-weight: 800; letter-spacing: .01em; color: #111; margin: 0; }
+  .cs-sub { text-align: center; font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #444; margin: 3px 0 0; }
+  .cs-date { text-align: center; font-family: var(--sans); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #888; margin: 4px 0 18px; }
+
+  .cs-sec { margin: 0 0 14px; }
+  .cs-h { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #111; margin: 0 0 4px; }
+  .cs-hrule { border: none; border-top: 2px solid #111; margin: 0 0 8px; }
+
+  /* run-of-show rows */
+  .cs-row { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; font-size: 15px; line-height: 1.35; }
+  .cs-row .cs-label { font-weight: 700; color: #111; flex: 0 0 152px; }
+  .cs-row .cs-val { flex: 1; color: #1c2430; }
+  .cs-row .cs-topic { color: #666; font-style: italic; }
+  .cs-row.dim .cs-val { color: #999; }
+
+  /* verbatim vote callouts */
+  .cs-say { border-left: 3px solid #111; background: #f6f7f9; padding: 8px 12px; margin: 7px 0; font-size: 14.5px; line-height: 1.5; }
+  .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+  .cs-say .cs-names { font-weight: 700; color: #111; }
+  .cs-say .cs-quote { color: #1c2430; }
+  .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
+  .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
+  .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
   @media print {
     body { background: #fff; }
@@ -159,7 +173,7 @@
     .sheet-overlay { position: static; }
     .sheet-scroll { padding: 0; }
     .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.4in 0.5in; max-width: none; }
-    .chart td, .chart th { padding: 5px 8px; }
+    .cs-say, .cs-sec, .cs-row { page-break-inside: avoid; }
     @page { margin: 0.5in; }
   }
 </style>
@@ -705,99 +719,113 @@
   }
 
   // ---------- one-page conducting chart ----------
-  function chartRow(item, who, detail) {
-    var tr = el("tr");
-    tr.appendChild(el("td", "c-item", item));
-    tr.appendChild(el("td", "c-who", who || ""));
-    tr.appendChild(el("td", "c-detail", detail || ""));
-    return tr;
+  // one flowing row: label + value (+ optional italic topic)
+  function csRow(label, val, topic, dim) {
+    var r = el("div", "cs-row" + (dim ? " dim" : ""));
+    r.appendChild(el("span", "cs-label", label));
+    var v = el("span", "cs-val");
+    v.appendChild(document.createTextNode(val || "\u2014"));
+    if (topic) { v.appendChild(document.createTextNode("  ")); v.appendChild(el("span", "cs-topic", "\u2014 " + topic)); }
+    r.appendChild(v);
+    return r;
   }
+  function csSection(host, title) {
+    var s = el("div", "cs-sec");
+    s.appendChild(el("div", "cs-h", title));
+    s.appendChild(el("hr", "cs-hrule"));
+    host.appendChild(s);
+    return s;
+  }
+  // verbatim callout the bishop reads aloud
+  function csSay(cue, buildInner) {
+    var box = el("div", "cs-say");
+    box.appendChild(el("span", "cs-cue", cue));
+    buildInner(box);
+    return box;
+  }
+
   function buildScript(w) {
     var doc = document.createDocumentFragment();
-    doc.appendChild(el("h1", null, "Conducting Sheet"));
-    doc.appendChild(el("p", "doc-ward", WARD));
-    doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
+    var cs = el("div", "cs");
+    doc.appendChild(cs);
 
-    // top: opening block
-    var t1 = el("table", "chart");
-    var tb1 = el("tbody");
-    var head = el("tr");
-    head.appendChild(el("th", "c-item", "Item"));
-    head.appendChild(el("th", "c-who", "Who / What"));
-    head.appendChild(el("th", "c-detail", "Notes"));
-    tb1.appendChild(head);
-    tb1.appendChild(chartRow("Conducting", w.conducting || "\u2014", ""));
-    tb1.appendChild(chartRow("Opening hymn", w.openingHymn || "\u2014", ""));
-    tb1.appendChild(chartRow("Invocation", w.invocation || "\u2014", ""));
-    t1.appendChild(tb1);
-    doc.appendChild(t1);
+    cs.appendChild(el("div", "cs-title", "Conducting Sheet"));
+    cs.appendChild(el("div", "cs-sub", WARD));
+    cs.appendChild(el("div", "cs-date", fmtDate(w.date)));
 
-    // ward business (compact verbiage)
+    // ---- OPENING ----
+    var sOpen = csSection(cs, "Opening");
+    sOpen.appendChild(csRow("Conducting", w.conducting));
+    sOpen.appendChild(csRow("Opening hymn", w.openingHymn));
+    sOpen.appendChild(csRow("Invocation", w.invocation));
+
+    // ---- WARD BUSINESS ----
     var hasBiz = w.announcements || w.releases || w.callings;
     if (hasBiz) {
-      doc.appendChild(el("div", "doc-section-title", "Ward Business"));
+      var sBiz = csSection(cs, "Ward Business");
       if (w.announcements) {
-        var an = el("div", "biz");
-        an.appendChild(el("span", "cue", "Announcements: "));
-        an.appendChild(document.createTextNode(lines(w.announcements).join("  \u00b7  ")));
-        doc.appendChild(an);
+        sBiz.appendChild(csRow("Announcements", lines(w.announcements).join("  \u00b7  ")));
       }
       if (w.releases) {
-        var rel = el("div", "biz");
-        rel.appendChild(el("span", "cue", "Releases \u2014 thank & vote: "));
-        rel.appendChild(el("span", "names", lines(w.releases).join(", ")));
-        doc.appendChild(rel);
+        sBiz.appendChild(csSay("Releases \u2014 read, then invite thanks", function (box) {
+          var q = el("div", "cs-quote");
+          q.appendChild(document.createTextNode("\u201cWe have released "));
+          q.appendChild(el("span", "cs-names", lines(w.releases).join(", ")));
+          q.appendChild(document.createTextNode(". Those who wish to express thanks, please raise your hand.\u201d"));
+          box.appendChild(q);
+        }));
       }
       if (w.callings) {
-        var cal = el("div", "biz");
-        cal.appendChild(el("span", "cue", "Sustainings \u2014 stand, then vote: "));
-        cal.appendChild(el("span", "names", lines(w.callings).join("; ")));
-        doc.appendChild(cal);
+        sBiz.appendChild(csSay("Sustainings \u2014 ask each to stand", function (box) {
+          lines(w.callings).forEach(function (l) {
+            var line = el("div", "cs-checkline");
+            line.appendChild(el("span", "cs-box", "\u25a1"));
+            line.appendChild(el("span", "cs-names", l));
+            box.appendChild(line);
+          });
+          box.appendChild(el("div", "cs-quote", "\u201cAll in favor, please raise your hand. Any opposed. Thank you; you may be seated.\u201d"));
+        }));
       }
       if (w.blessings) {
-        var bl = el("div", "biz");
-        bl.appendChild(el("span", "cue", "Blessings / confirmations: "));
-        bl.appendChild(document.createTextNode(w.blessings));
-        doc.appendChild(bl);
+        sBiz.appendChild(csRow("Blessings / confirmations", w.blessings));
       }
     }
 
-    // sacrament handoff (toggleable)
+    // ---- SACRAMENT ----
     if (w.showSacramentBlock !== false) {
+      var sSac = csSection(cs, "Sacrament");
+      sSac.appendChild(csRow("Sacrament hymn", w.sacramentHymn));
       var num = hymnNumFromValue(w.sacramentHymn);
-      var sac = el("div", "biz");
-      sac.appendChild(el("span", "cue", "Sacrament: "));
-      sac.appendChild(document.createTextNode(
-        "invite reverence; congregation sings hymn #" + (num || "___") +
-        ", then the Aaronic Priesthood administers the sacrament."));
-      doc.appendChild(sac);
-    }
-
-    doc.appendChild(el("hr", "rule"));
-
-    // run of show
-    var t2 = el("table", "chart");
-    var tb2 = el("tbody");
-    var h2 = el("tr");
-    h2.appendChild(el("th", "c-item", "Then"));
-    h2.appendChild(el("th", "c-who", "Who"));
-    h2.appendChild(el("th", "c-detail", "Topic / notes"));
-    tb2.appendChild(h2);
-    tb2.appendChild(chartRow("Sacrament hymn", w.sacramentHymn || "\u2014", ""));
-    if (w.testimony) {
-      tb2.appendChild(chartRow("Program", "Testimony meeting", "bear & invite testimonies"));
+      sSac.appendChild(csSay("Read after the business", function (box) {
+        box.appendChild(el("div", "cs-quote",
+          "\u201cWe now invite your reverence. The congregation will sing hymn #" + (num || "___") +
+          ", after which the Aaronic Priesthood will administer the sacrament.\u201d"));
+      }));
     } else {
-      if (w.youthSpeaker) tb2.appendChild(chartRow("Youth speaker", w.youthSpeaker, w.youthTopic || ""));
-      (w.speakers || []).forEach(function (sp, i) {
-        if (sp.name) tb2.appendChild(chartRow("Speaker " + (i + 1), sp.name, sp.topic || ""));
-      });
+      // still show the hymn even if the spoken block is hidden
+      var sSac2 = csSection(cs, "Sacrament");
+      sSac2.appendChild(csRow("Sacrament hymn", w.sacramentHymn));
     }
-    if (w.restHymn) tb2.appendChild(chartRow("Rest hymn", w.restHymn, ""));
-    if (w.musical) tb2.appendChild(chartRow("Musical number", w.musical, ""));
-    tb2.appendChild(chartRow("Closing hymn", w.closingHymn || "\u2014", ""));
-    tb2.appendChild(chartRow("Benediction", w.benediction || "\u2014", ""));
-    t2.appendChild(tb2);
-    doc.appendChild(t2);
+
+    // ---- PROGRAM ----
+    var sProg = csSection(cs, "Program");
+    if (w.testimony) {
+      sProg.appendChild(csRow("Testimony meeting", "bear testimony, then invite the congregation"));
+    } else {
+      if (w.youthSpeaker) sProg.appendChild(csRow("Youth speaker", w.youthSpeaker, w.youthTopic));
+      var anyAdult = false;
+      (w.speakers || []).forEach(function (sp, i) {
+        if (sp.name) { sProg.appendChild(csRow("Speaker " + (i + 1), sp.name, sp.topic)); anyAdult = true; }
+      });
+      if (!w.youthSpeaker && !anyAdult) sProg.appendChild(csRow("Speakers", "", null, true));
+    }
+    if (w.restHymn) sProg.appendChild(csRow("Rest hymn", w.restHymn));
+    if (w.musical) sProg.appendChild(csRow("Musical number", w.musical));
+
+    // ---- CLOSING ----
+    var sClose = csSection(cs, "Closing");
+    sClose.appendChild(csRow("Closing hymn", w.closingHymn));
+    sClose.appendChild(csRow("Benediction", w.benediction));
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
