@@ -62,6 +62,16 @@
   .week-tag.past { background: #eceef1; color: var(--faint); }
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-family: var(--serif); font-style: italic; font-size: 17px; }
 
+  /* archive */
+  .archive-toggle { display: flex; align-items: center; gap: 8px; width: 100%; background: transparent; border: none; padding: 14px 4px 10px; margin-top: 8px; color: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; }
+  .archive-toggle .arch-chev { transition: transform .18s; font-size: 10px; }
+  .archive-toggle.open .arch-chev { transform: rotate(90deg); }
+  .archive-toggle .arch-count { color: var(--faint); }
+  .archive-toggle .arch-line { flex: 1; height: 1px; background: var(--rule); }
+  .archive-body { display: none; }
+  .archive-body.open { display: block; }
+  .archive-body .week-card { opacity: .72; }
+
   .back-link { background: transparent; border: none; color: var(--accent); font-size: 15px; padding: 0; margin-bottom: 14px; font-weight: 500; }
   .zone { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 4px 16px 14px; margin-bottom: 18px; box-shadow: var(--shadow); }
   .zone-head { display: flex; align-items: center; gap: 10px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; }
@@ -572,6 +582,7 @@
   // ---------- state ----------
   var state = { weeks: [], bishopric: [], assignments: [] };
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
+  var archiveOpen = { sacrament: false, bishopric: false };
 
   // ---------- Supabase client ----------
   var sb = null;
@@ -882,6 +893,25 @@
     return bar;
   }
 
+  // collapsible archive section (shared by both tabs)
+  function renderArchive(app, pastItems, tabKey, buildCard) {
+    if (!pastItems.length) return;
+    var toggle = el("button", "archive-toggle" + (archiveOpen[tabKey] ? " open" : ""));
+    toggle.appendChild(el("span", "arch-chev", "\u25b8"));
+    toggle.appendChild(el("span", null, "Archive"));
+    toggle.appendChild(el("span", "arch-count", "(" + pastItems.length + ")"));
+    toggle.appendChild(el("span", "arch-line"));
+    var body = el("div", "archive-body" + (archiveOpen[tabKey] ? " open" : ""));
+    pastItems.forEach(function (item) { body.appendChild(buildCard(item)); });
+    toggle.onclick = function () {
+      archiveOpen[tabKey] = !archiveOpen[tabKey];
+      toggle.classList.toggle("open");
+      body.classList.toggle("open");
+    };
+    app.appendChild(toggle);
+    app.appendChild(body);
+  }
+
   function renderList(app) {
     var head = el("div", "list-head");
     head.appendChild(el("span", "eyebrow", "Sacrament meetings"));
@@ -901,7 +931,8 @@
     var weeks = state.weeks.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
     var upcoming = weeks.filter(function (w) { return !isPast(w.date); });
     var past = weeks.filter(function (w) { return isPast(w.date); }).reverse();
-    upcoming.concat(past).forEach(function (w) {
+
+    function buildWeekCard(w) {
       var card = el("div", "week-card");
       var when = el("div", "week-when");
       when.appendChild(el("div", "week-date", fmtShort(w.date)));
@@ -916,8 +947,17 @@
       card.appendChild(when);
       card.appendChild(el("span", "week-tag" + (isPast(w.date) ? " past" : ""), isPast(w.date) ? "past" : "upcoming"));
       card.onclick = function () { view = { tab: "sacrament", screen: "editor", weekId: w.id }; render(); };
-      app.appendChild(card);
-    });
+      return card;
+    }
+
+    if (!upcoming.length && !past.length) {
+      // already handled by empty check above
+    }
+    if (!upcoming.length && past.length) {
+      app.appendChild(el("div", "empty", "Nothing upcoming. Tap \u201c+ new week\u201d to plan one."));
+    }
+    upcoming.forEach(function (w) { app.appendChild(buildWeekCard(w)); });
+    renderArchive(app, past, "sacrament", buildWeekCard);
   }
 
   // ---------- editor ----------
@@ -1192,7 +1232,8 @@
     var mtgs = state.bishopric.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
     var upcoming = mtgs.filter(function (m) { return !isPast(m.date); });
     var past = mtgs.filter(function (m) { return isPast(m.date); }).reverse();
-    upcoming.concat(past).forEach(function (m) {
+
+    function buildMtgCard(m) {
       var card = el("div", "week-card");
       var when = el("div", "week-when");
       when.appendChild(el("div", "week-date", fmtShort(m.date)));
@@ -1205,8 +1246,14 @@
       card.appendChild(when);
       card.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
       card.onclick = function () { view = { tab: "bishopric", screen: "editor", bmId: m.id }; render(); };
-      app.appendChild(card);
-    });
+      return card;
+    }
+
+    if (!upcoming.length && past.length) {
+      app.appendChild(el("div", "empty", "Nothing upcoming. Tap \u201c+ new meeting\u201d to start."));
+    }
+    upcoming.forEach(function (m) { app.appendChild(buildMtgCard(m)); });
+    renderArchive(app, past, "bishopric", buildMtgCard);
   }
 
   function renderBishopricEditor(app) {
