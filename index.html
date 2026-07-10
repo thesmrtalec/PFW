@@ -604,7 +604,16 @@
     sb = window.supabase.createClient(window.PFW_SUPABASE_URL, window.PFW_SUPABASE_ANON_KEY);
   }
 
-  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+  function uid() {
+    // Real UUID so every record has its permanent id at creation time.
+    // This makes Supabase upserts idempotent and order-independent.
+    if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID();
+    // fallback UUIDv4
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+      var r = (Math.random() * 16) | 0, v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
 
   // ---------- sync status pill ----------
   var pillTimer = null;
@@ -716,14 +725,11 @@
 
     // meetings first (children need their ids), then reconcile children + assignments
     Promise.all([
-      smRows.length ? sb.from("sacrament_meetings").upsert(smRows).select() : Promise.resolve({ data: [] }),
-      bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows).select() : Promise.resolve({ data: [] })
+      smRows.length ? sb.from("sacrament_meetings").upsert(smRows) : Promise.resolve({ error: null }),
+      bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows) : Promise.resolve({ error: null })
     ]).then(function (r) {
       if (r[0].error || r[1].error) throw (r[0].error || r[1].error);
-      // pair returned uuids back to local meetings by index (upsert preserves order)
-      var savedSm = r[0].data || [], savedBm = r[1].data || [];
-      state.weeks.forEach(function (w, i) { if (savedSm[i]) w.id = savedSm[i].id; });
-      state.bishopric.forEach(function (m, i) { if (savedBm[i]) m.id = savedBm[i].id; });
+      // ids are stable client-generated UUIDs, so no reconciliation needed
       return pushChildren(owner);
     }).then(function () {
       pill("saved", "saved");
@@ -828,7 +834,7 @@
 
   function blankWeek() {
     return {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      id: uid(),
       date: nextSundayISO(),
       conducting: "",
       openingHymn: "", sacramentHymn: "", restHymn: "", closingHymn: "",
