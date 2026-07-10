@@ -184,6 +184,8 @@
   .cs-title { text-align: center; font-family: var(--sans); font-size: 21px; font-weight: 800; letter-spacing: .01em; color: #111; margin: 0; }
   .cs-sub { text-align: center; font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: .04em; color: #444; margin: 3px 0 0; }
   .cs-date { text-align: center; font-family: var(--sans); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #888; margin: 4px 0 18px; }
+  .cs-sub-lg { font-size: 17px; margin-top: 4px; color: #222; }
+  .cs-date-lg { font-size: 13px; margin: 5px 0 20px; }
 
   .cs-sec { margin: 0 0 14px; }
   .cs-h { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #111; margin: 0 0 4px; }
@@ -265,7 +267,7 @@
     .sheet-toolbar, .wrap { display: none !important; }
     .sheet-overlay { position: static; }
     .sheet-scroll { padding: 0; }
-    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.4in 0.5in; max-width: none; }
+    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.25in 0.45in; max-width: none; }
     .cs-say, .cs-sec, .cs-row { page-break-inside: avoid; }
     /* swipe pair -> stacked full pages, one per sheet */
     .pair-track { display: block; overflow: visible; }
@@ -1136,9 +1138,9 @@
 
     // ===== outputs =====
     var out = el("div", "out-bar");
-    var b1 = el("button", "btn", "Program \u2192");
+    var b1 = el("button", "btn", "Program");
     b1.onclick = function () { openSheet(buildProgram(w)); };
-    var b2 = el("button", "btn secondary", "Conducting \u2192");
+    var b2 = el("button", "btn secondary", "Conducting");
     b2.onclick = function () { openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
@@ -1375,9 +1377,9 @@
 
     // ===== outputs =====
     var out = el("div", "out-bar");
-    var b1 = el("button", "btn", "Agenda \u2192");
+    var b1 = el("button", "btn", "Agenda");
     b1.onclick = function () { openSheet(buildAgenda(m)); };
-    var b2 = el("button", "btn secondary", "Follow-up \u2192");
+    var b2 = el("button", "btn secondary", "Follow-up");
     b2.onclick = function () { openSheet(buildFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
@@ -1597,9 +1599,8 @@
     var cs = el("div", "cs");
     doc.appendChild(cs);
 
-    cs.appendChild(el("div", "cs-title", "Conducting Brief"));
-    cs.appendChild(el("div", "cs-sub", WARD));
-    cs.appendChild(el("div", "cs-date", fmtDate(w.date)));
+    cs.appendChild(el("div", "cs-sub cs-sub-lg", WARD));
+    cs.appendChild(el("div", "cs-date cs-date-lg", fmtDate(w.date)));
 
     // This sheet is intentionally lean: ONLY what the conductor says or does
     // that is NOT already printed on the ward program. Quiet weeks stay nearly blank.
