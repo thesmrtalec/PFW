@@ -306,18 +306,30 @@
 
     /* flattened print container (used for the pair view) */
     #printFlat { display: block; }
-    .print-flat-page { break-inside: avoid; page-break-inside: avoid; }
+    .print-flat-page { break-inside: auto; page-break-inside: auto; }
+    /* keep individual sections intact when a page must break */
+    .print-flat-page .cs-sec, .print-flat-page .cs-say,
+    .print-flat-page .doc-line { break-inside: avoid; page-break-inside: avoid; }
     /* force a break BEFORE every page except the first; never after */
     .print-flat-page + .print-flat-page { page-break-before: always; break-before: page; }
     .print-flat-page:last-child { page-break-after: avoid; break-after: avoid; }
     .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
     /* a trailing bottom-margin on the last block can round up onto a new sheet */
     .print-flat-page .doc > *:last-child { margin-bottom: 0 !important; }
+    /* conducting brief runs slightly over one sheet; compress its vertical
+       rhythm in print so Announcements + Business + Sacrament fit on page 2 */
+    .print-flat-page .cs-date-lg { margin: 4px 0 12px !important; }
+    .print-flat-page .cs-sec { margin: 0 0 9px !important; }
+    .print-flat-page .cs-hrule { margin: 0 0 6px !important; }
+    .print-flat-page .cs-say { margin: 5px 0 !important; padding: 6px 10px !important; line-height: 1.4 !important; }
+    .print-flat-page .cs-checkline { padding: 2px 0 !important; }
+    .print-flat-page .cs-say .cs-quote + .cs-checkline { margin-top: 3px !important; }
+    .print-flat-page .cs-say .cs-checkline + .cs-quote { margin-top: 4px !important; }
     /* When flat mode is active, hide the ENTIRE live tree; only #printFlat prints.
        Anything left in normal flow (the empty overlay, an over-tall scroll box)
        is what iOS was paginating into a trailing blank sheet. */
     body.printing-flat > *:not(#printFlat) { display: none !important; }
-    @page { margin: 0.6in 0.75in; }
+    @page { margin: 0.5in 0.75in; }
   }
 </style>
 </head>
