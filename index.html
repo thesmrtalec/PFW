@@ -15,6 +15,13 @@
 <meta name="theme-color" content="#22304a" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;1,400&display=swap" />
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // ====== SUPABASE CONFIG — paste your project values here ======
+  window.PFW_SUPABASE_URL = "https://dnagjfcbbkmbgneotnjj.supabase.co";
+  window.PFW_SUPABASE_ANON_KEY = "sb_publishable_4q-1h5SKYa6vQe8pAhU-ZQ_uS5ReaKA";
+  // ==============================================================
+</script>
 <style>
   :root {
     --paper:#f5f6f8; --card:#ffffff; --ink:#1c2430; --deep:#22304a;
@@ -173,6 +180,29 @@
   .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
+  /* ---- login ---- */
+  .login-wrap { max-width: 380px; margin: 8vh auto 0; padding: 0 20px; text-align: center; }
+  .login-logo { font-family: var(--serif); font-size: 30px; font-weight: 600; color: var(--deep); margin: 0; }
+  .login-sub { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin: 5px 0 28px; }
+  .login-card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 22px 20px; box-shadow: var(--shadow); text-align: left; }
+  .login-card label { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 12px 0 5px; }
+  .login-card label:first-child { margin-top: 0; }
+  .login-card input { width: 100%; box-sizing: border-box; font-size: 16px; border: 1px solid var(--rule); border-radius: 8px; padding: 11px 12px; -webkit-appearance: none; }
+  .login-card input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .login-btn { width: 100%; margin-top: 18px; background: var(--deep); color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
+  .login-msg { font-size: 13px; margin-top: 14px; text-align: center; min-height: 18px; }
+  .login-msg.err { color: #a3453a; }
+  .login-msg.ok { color: var(--confirmed); }
+  .login-config-warn { background: #faf3e6; border: 1px solid #e8d9b8; color: #8a6d3b; font-size: 12.5px; border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; line-height: 1.45; }
+
+  /* sync status pill */
+  .sync-pill { position: fixed; top: calc(env(safe-area-inset-top) + 8px); right: 12px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; z-index: 150; transition: opacity .3s; }
+  .sync-pill.saving { background: #faf3e6; color: #b08948; }
+  .sync-pill.saved { background: var(--confirmed-soft); color: var(--confirmed); }
+  .sync-pill.error { background: #f6e5e2; color: #a3453a; }
+  .sync-pill.hidden { opacity: 0; pointer-events: none; }
+  .signout-link { display: block; text-align: center; margin: 20px auto 0; background: none; border: none; color: var(--faint); font-size: 12.5px; }
+
   /* ---- tab bar ---- */
   .tabs { display: flex; gap: 4px; max-width: 620px; margin: 0 auto 18px; padding: 4px; background: #eceef1; border-radius: 11px; }
   .tabs .tab { flex: 1; text-align: center; font-family: var(--sans); font-size: 13.5px; font-weight: 600; padding: 9px 6px; border-radius: 8px; border: none; background: transparent; color: var(--muted); }
@@ -215,6 +245,7 @@
 </style>
 </head>
 <body>
+<div class="sync-pill hidden" id="syncPill"></div>
 <div class="wrap" id="app"></div>
 
 <div class="sheet-overlay" id="sheetOverlay">
@@ -433,31 +464,203 @@
   var state = { weeks: [], bishopric: [], assignments: [] };
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
 
-  function load() {
-    try { var raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch (e) {}
-    if (!state.weeks) state.weeks = [];
-    if (!state.bishopric) state.bishopric = [];
-    if (!state.assignments) state.assignments = [];
-    // migrate old free-text releases/callings into structured rows
-    state.weeks.forEach(function (w) {
-      if (typeof w.releases === "string") w.releases = strToRows(w.releases);
-      if (!w.releases) w.releases = [];
-      if (typeof w.callings === "string") w.callings = strToRows(w.callings);
-      if (!w.callings) w.callings = [];
-      if (w.youthShown === undefined) w.youthShown = true;
-    });
+  // ---------- Supabase client ----------
+  var sb = null;
+  var currentUser = null;
+  function configured() {
+    return window.PFW_SUPABASE_URL &&
+           window.PFW_SUPABASE_URL.indexOf("YOUR_SUPABASE") === -1 &&
+           window.PFW_SUPABASE_ANON_KEY &&
+           window.PFW_SUPABASE_ANON_KEY.indexOf("YOUR_SUPABASE") === -1;
   }
-  // "Name - Calling" per line -> [{name, calling}]
-  function strToRows(str) {
-    return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).map(function (l) {
-      var m = l.split(/\s*[-\u2013\u2014]\s*/);
-      if (m.length >= 2) return { name: m[0].trim(), calling: m.slice(1).join(" - ").trim() };
-      return { name: l, calling: "" };
-    });
+  function initSupabase() {
+    if (sb || !configured() || !window.supabase) return;
+    sb = window.supabase.createClient(window.PFW_SUPABASE_URL, window.PFW_SUPABASE_ANON_KEY);
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 5); }
+
+  // ---------- sync status pill ----------
+  var pillTimer = null;
+  function pill(kind, text) {
+    var p = document.getElementById("syncPill");
+    if (!p) return;
+    p.className = "sync-pill " + kind;
+    p.textContent = text;
+    if (pillTimer) clearTimeout(pillTimer);
+    if (kind === "saved") {
+      pillTimer = setTimeout(function () { p.className = "sync-pill hidden"; }, 1400);
+    }
+  }
+
+  // ---------- LOAD: pull everything from Supabase into `state` ----------
+  function load(cb) {
+    if (!sb) { if (cb) cb(); return; }
+    pill("saving", "loading\u2026");
+    Promise.all([
+      sb.from("sacrament_meetings").select("*"),
+      sb.from("sacrament_speakers").select("*"),
+      sb.from("sacrament_releases").select("*"),
+      sb.from("sacrament_callings").select("*"),
+      sb.from("bishopric_meetings").select("*"),
+      sb.from("bishopric_counsel").select("*"),
+      sb.from("bishopric_callings").select("*"),
+      sb.from("assignments").select("*")
+    ]).then(function (res) {
+      var err = res.filter(function (r) { return r.error; })[0];
+      if (err) { pill("error", "load failed"); console.error(err.error); if (cb) cb(err.error); return; }
+      var d = res.map(function (r) { return r.data || []; });
+      hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
+      pill("saved", "loaded");
+      if (cb) cb(null);
+    }).catch(function (e) { pill("error", "load failed"); console.error(e); if (cb) cb(e); });
+  }
+
+  // map DB rows -> in-memory camelCase model the UI already uses
+  function hydrate(sm, spk, rel, cal, bm, bc, bk, asg) {
+    function kids(rows, mid) { return rows.filter(function (x) { return x.meeting_id === mid; }).sort(function (a, b) { return (a.position||0)-(b.position||0); }); }
+    state.weeks = (sm || []).map(function (m) {
+      return {
+        id: m.id, date: m.meeting_date, conducting: m.conducting || "",
+        openingHymn: m.opening_hymn || "", sacramentHymn: m.sacrament_hymn || "",
+        restHymn: m.rest_hymn || "", closingHymn: m.closing_hymn || "",
+        invocation: m.invocation || "", benediction: m.benediction || "",
+        musical: m.musical || "", blessings: m.blessings || "",
+        youthSpeaker: m.youth_speaker || "", youthTopic: m.youth_topic || "",
+        youthShown: m.youth_shown !== false, testimony: !!m.testimony,
+        announcements: m.announcements || "", showSacramentBlock: m.show_sacrament_block !== false,
+        speakers: kids(spk, m.id).map(function (s) { return { id: s.id, name: s.name || "", topic: s.topic || "" }; }),
+        releases: kids(rel, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "" }; }),
+        callings: kids(cal, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "" }; })
+      };
+    });
+    // ensure at least the default two speaker rows for empty meetings
+    state.weeks.forEach(function (w) { if (!w.speakers.length) w.speakers = [{ name:"", topic:"" }, { name:"", topic:"" }]; });
+
+    state.bishopric = (bm || []).map(function (m) {
+      return {
+        id: m.id, date: m.meeting_date, ministering: m.ministering || "",
+        ordinances: m.ordinances || "", notes: m.notes || "",
+        counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
+        callings: kids(bk, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "", status: s.status || "consider" }; })
+      };
+    });
+    state.assignments = (asg || []).map(function (a) {
+      return { id: a.id, who: a.assignee || "", what: a.what || "", status: a.status || "open",
+               dateMade: a.date_made, dateDone: a.date_done, meetingId: a.origin_meeting };
+    });
+  }
+
+  // ---------- SAVE: debounced full-state push to Supabase ----------
+  var saveTimer = null;
+  function save() {
+    if (!sb) return;
+    if (saveTimer) clearTimeout(saveTimer);
+    pill("saving", "saving\u2026");
+    saveTimer = setTimeout(pushAll, 700);
+  }
+  function isUuid(v) { return typeof v === "string" && /^[0-9a-f]{8}-/.test(v); }
+
+  function pushAll() {
+    if (!sb || !currentUser) return;
+    var owner = currentUser.id;
+    // Build upsert payloads. Local-only ids (non-uuid) are dropped so Postgres
+    // generates real uuids; we then reload to pick them up.
+    var smRows = state.weeks.map(function (w) {
+      var r = {
+        owner: owner, meeting_date: w.date, conducting: w.conducting,
+        opening_hymn: w.openingHymn, sacrament_hymn: w.sacramentHymn,
+        rest_hymn: w.restHymn, closing_hymn: w.closingHymn,
+        invocation: w.invocation, benediction: w.benediction,
+        musical: w.musical, blessings: w.blessings,
+        youth_speaker: w.youthSpeaker, youth_topic: w.youthTopic,
+        youth_shown: w.youthShown, testimony: w.testimony,
+        announcements: w.announcements, show_sacrament_block: w.showSacramentBlock,
+        updated_at: new Date().toISOString()
+      };
+      if (isUuid(w.id)) r.id = w.id;
+      return r;
+    });
+    var bmRows = state.bishopric.map(function (m) {
+      var r = { owner: owner, meeting_date: m.date, ministering: m.ministering,
+                ordinances: m.ordinances, notes: m.notes, updated_at: new Date().toISOString() };
+      if (isUuid(m.id)) r.id = m.id;
+      return r;
+    });
+
+    // meetings first (children need their ids), then reconcile children + assignments
+    Promise.all([
+      smRows.length ? sb.from("sacrament_meetings").upsert(smRows).select() : Promise.resolve({ data: [] }),
+      bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows).select() : Promise.resolve({ data: [] })
+    ]).then(function (r) {
+      if (r[0].error || r[1].error) throw (r[0].error || r[1].error);
+      // pair returned uuids back to local meetings by index (upsert preserves order)
+      var savedSm = r[0].data || [], savedBm = r[1].data || [];
+      state.weeks.forEach(function (w, i) { if (savedSm[i]) w.id = savedSm[i].id; });
+      state.bishopric.forEach(function (m, i) { if (savedBm[i]) m.id = savedBm[i].id; });
+      return pushChildren(owner);
+    }).then(function () {
+      pill("saved", "saved");
+    }).catch(function (e) { pill("error", "save failed"); console.error(e); });
+  }
+
+  function pushChildren(owner) {
+    var ops = [];
+    // For each parent, delete its existing children then insert current ones.
+    // Simple and correct for small data; keeps ordering via position.
+    function childOps(table, parentField, parents, extract) {
+      parents.forEach(function (p) {
+        if (!isUuid(p.id)) return;
+        ops.push(
+          sb.from(table).delete().eq(parentField, p.id).then(function () {
+            var rows = extract(p).map(function (row, idx) {
+              var o = { owner: owner, position: idx };
+              o[parentField] = p.id;
+              return Object.assign(o, row);
+            });
+            return rows.length ? sb.from(table).insert(rows) : Promise.resolve();
+          })
+        );
+      });
+    }
+    childOps("sacrament_speakers", "meeting_id", state.weeks, function (w) {
+      return (w.speakers || []).filter(function (s){return s.name||s.topic;}).map(function (s) { return { name: s.name, topic: s.topic }; });
+    });
+    childOps("sacrament_releases", "meeting_id", state.weeks, function (w) {
+      return (w.releases || []).filter(function (s){return s.name||s.calling;}).map(function (s) { return { name: s.name, calling: s.calling }; });
+    });
+    childOps("sacrament_callings", "meeting_id", state.weeks, function (w) {
+      return (w.callings || []).filter(function (s){return s.name||s.calling;}).map(function (s) { return { name: s.name, calling: s.calling }; });
+    });
+    childOps("bishopric_counsel", "meeting_id", state.bishopric, function (m) {
+      return (m.counsel || []).filter(function (s){return s.name||s.note;}).map(function (s) { return { name: s.name, note: s.note }; });
+    });
+    childOps("bishopric_callings", "meeting_id", state.bishopric, function (m) {
+      return (m.callings || []).filter(function (s){return s.name||s.calling;}).map(function (s) { return { name: s.name, calling: s.calling, status: s.status }; });
+    });
+
+    // assignments (flat, owner-scoped): upsert existing uuids, insert new
+    var upAsg = [], inAsg = [];
+    state.assignments.forEach(function (a) {
+      var row = { owner: owner, assignee: a.who || "", what: a.what || "", status: a.status || "open",
+                  date_made: a.dateMade || null, date_done: a.dateDone || null,
+                  origin_meeting: isUuid(a.meetingId) ? a.meetingId : null };
+      if (isUuid(a.id)) { row.id = a.id; upAsg.push(row); } else inAsg.push({ local: a, row: row });
+    });
+    if (upAsg.length) ops.push(sb.from("assignments").upsert(upAsg));
+    inAsg.forEach(function (pair) {
+      ops.push(sb.from("assignments").insert(pair.row).select().then(function (res) {
+        if (res.data && res.data[0]) pair.local.id = res.data[0].id;
+      }));
+    });
+
+    return Promise.all(ops);
+  }
+
+  // hard delete helpers (used by delete buttons) — remove from DB immediately
+  function dbDelete(table, id) {
+    if (sb && isUuid(id)) sb.from(table).delete().eq("id", id).then(function(){}, function(e){ console.error(e); });
+  }
 
   // ----- bishopric meeting model -----
   function blankBishopric() {
@@ -492,6 +695,7 @@
     if (a) { a.status = (a.status === "done") ? "open" : "done"; a.dateDone = (a.status === "done") ? todayISO() : null; save(); }
   }
   function deleteAssignment(id) {
+    dbDelete("assignments", id);
     state.assignments = state.assignments.filter(function (x) { return x.id !== id; }); save();
   }
   function todayISO() { var d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
@@ -831,6 +1035,7 @@
     del.style.cssText += "display:block;margin:14px auto 0;";
     del.onclick = function () {
       if (del.dataset.armed === "1") {
+        dbDelete("sacrament_meetings", w.id);
         state.weeks = state.weeks.filter(function (x) { return x.id !== w.id; });
         save(); view = { tab: "sacrament", screen: "list" }; render(); return;
       }
@@ -1065,6 +1270,7 @@
     del.style.cssText += "display:block;margin:14px auto 0;";
     del.onclick = function () {
       if (del.dataset.armed === "1") {
+        dbDelete("bishopric_meetings", m.id);
         state.bishopric = state.bishopric.filter(function (x) { return x.id !== m.id; });
         save(); view = { tab: "bishopric", screen: "list" }; render(); return;
       }
@@ -1371,8 +1577,85 @@
   };
   document.getElementById("sheetPrint").onclick = function () { window.print(); };
 
-  load();
-  render();
+  // ================= AUTH / BOOT =================
+  function renderLogin(msg, msgKind) {
+    var app = document.getElementById("app");
+    app.innerHTML = "";
+    document.getElementById("syncPill").className = "sync-pill hidden";
+
+    var wrap = el("div", "login-wrap");
+    wrap.appendChild(el("h1", "login-logo", "Pioneer Farms"));
+    wrap.appendChild(el("div", "login-sub", "ward operations"));
+
+    var card = el("div", "login-card");
+    if (!configured()) {
+      card.appendChild(el("div", "login-config-warn",
+        "Supabase isn\u2019t configured yet. Paste your project URL and anon key into the CONFIG block near the top of index.html, then reload."));
+    }
+    card.appendChild(el("label", null, "email"));
+    var email = el("input"); email.type = "email"; email.autocapitalize = "off"; email.autocomplete = "username";
+    card.appendChild(email);
+    card.appendChild(el("label", null, "password"));
+    var pass = el("input"); pass.type = "password"; pass.autocomplete = "current-password";
+    card.appendChild(pass);
+    var btn = el("button", "login-btn", "Sign in");
+    var msgEl = el("div", "login-msg" + (msgKind ? " " + msgKind : ""), msg || "");
+
+    function attempt() {
+      if (!configured()) { msgEl.className = "login-msg err"; msgEl.textContent = "Add your Supabase keys first."; return; }
+      initSupabase();
+      btn.disabled = true; msgEl.className = "login-msg"; msgEl.textContent = "Signing in\u2026";
+      sb.auth.signInWithPassword({ email: email.value.trim(), password: pass.value }).then(function (r) {
+        btn.disabled = false;
+        if (r.error) { msgEl.className = "login-msg err"; msgEl.textContent = r.error.message; return; }
+        currentUser = r.data.user;
+        bootApp();
+      });
+    }
+    btn.onclick = attempt;
+    pass.onkeydown = function (e) { if (e.key === "Enter") attempt(); };
+
+    card.appendChild(btn);
+    card.appendChild(msgEl);
+    wrap.appendChild(card);
+    app.appendChild(wrap);
+    setTimeout(function () { email.focus(); }, 60);
+  }
+
+  function bootApp() {
+    view = { tab: "sacrament", screen: "list" };
+    load(function (err) {
+      render();
+      // append a sign-out affordance under the list
+      addSignOut();
+    });
+  }
+  function addSignOut() {
+    if (document.getElementById("pfwSignOut")) return;
+    var so = el("button", "signout-link", "sign out");
+    so.id = "pfwSignOut";
+    so.onclick = function () {
+      if (sb) sb.auth.signOut().then(function () { currentUser = null; state = { weeks: [], bishopric: [], assignments: [] }; renderLogin("Signed out.", "ok"); });
+    };
+    document.getElementById("app").appendChild(so);
+  }
+
+  // wrap render() so sign-out link persists on list screens
+  var _render = render;
+  render = function () {
+    _render();
+    if (currentUser && view.screen === "list") { var so = document.getElementById("pfwSignOut"); if (so) document.getElementById("app").appendChild(so); else addSignOut(); }
+  };
+
+  // startup: restore session if present, else show login
+  (function start() {
+    if (!configured()) { renderLogin(); return; }
+    initSupabase();
+    sb.auth.getSession().then(function (r) {
+      if (r.data && r.data.session) { currentUser = r.data.session.user; bootApp(); }
+      else renderLogin();
+    }).catch(function () { renderLogin(); });
+  })();
 })();
 </script>
 </body>
