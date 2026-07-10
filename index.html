@@ -432,6 +432,22 @@
     if (!state.weeks) state.weeks = [];
     if (!state.bishopric) state.bishopric = [];
     if (!state.assignments) state.assignments = [];
+    // migrate old free-text releases/callings into structured rows
+    state.weeks.forEach(function (w) {
+      if (typeof w.releases === "string") w.releases = strToRows(w.releases);
+      if (!w.releases) w.releases = [];
+      if (typeof w.callings === "string") w.callings = strToRows(w.callings);
+      if (!w.callings) w.callings = [];
+      if (w.youthShown === undefined) w.youthShown = true;
+    });
+  }
+  // "Name - Calling" per line -> [{name, calling}]
+  function strToRows(str) {
+    return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean).map(function (l) {
+      var m = l.split(/\s*[-\u2013\u2014]\s*/);
+      if (m.length >= 2) return { name: m[0].trim(), calling: m.slice(1).join(" - ").trim() };
+      return { name: l, calling: "" };
+    });
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
@@ -484,9 +500,9 @@
       musical: "",
       blessings: "",
       speakers: [ { name: "", topic: "" }, { name: "", topic: "" } ],
-      youthSpeaker: "", youthTopic: "",
+      youthSpeaker: "", youthTopic: "", youthShown: true,
       testimony: false,
-      releases: "", callings: "", announcements: "",
+      releases: [], callings: [], announcements: "",
       showSacramentBlock: true
     };
   }
@@ -552,8 +568,7 @@
     head.appendChild(el("span", "eyebrow", "Sacrament meetings"));
     var addBtn = el("button", "btn-ghost", "+ new week");
     addBtn.onclick = function () {
-      var latest = state.weeks.slice().sort(function (a,b){ return b.date.localeCompare(a.date); })[0];
-      var w = latest ? cloneSkeleton(latest) : blankWeek();
+      var w = blankWeek();
       state.weeks.push(w); save();
       view = { tab: "sacrament", screen: "editor", weekId: w.id }; render();
     };
@@ -696,18 +711,27 @@
     zS.appendChild(tRow);
 
     if (!w.testimony) {
-      var ys = el("div", "speaker-row");
-      var ysf = el("div", "field sp-name");
-      ysf.appendChild(el("label", null, "youth speaker"));
-      var ysi = el("input"); ysi.type = "text"; ysi.value = w.youthSpeaker || "";
-      ysi.oninput = function () { w.youthSpeaker = ysi.value; save(); };
-      ysf.appendChild(ysi); ys.appendChild(ysf);
-      var ytf = el("div", "field sp-topic");
-      ytf.appendChild(el("label", null, "topic"));
-      var yti = el("input"); yti.type = "text"; yti.value = w.youthTopic || "";
-      yti.oninput = function () { w.youthTopic = yti.value; save(); };
-      ytf.appendChild(yti); ys.appendChild(ytf);
-      zS.appendChild(ys);
+      if (w.youthShown) {
+        var ys = el("div", "speaker-row");
+        var ysf = el("div", "field sp-name");
+        ysf.appendChild(el("label", null, "youth speaker"));
+        var ysi = el("input"); ysi.type = "text"; ysi.value = w.youthSpeaker || "";
+        ysi.oninput = function () { w.youthSpeaker = ysi.value; save(); };
+        ysf.appendChild(ysi); ys.appendChild(ysf);
+        var ytf = el("div", "field sp-topic");
+        ytf.appendChild(el("label", null, "topic"));
+        var yti = el("input"); yti.type = "text"; yti.value = w.youthTopic || "";
+        yti.oninput = function () { w.youthTopic = yti.value; save(); };
+        ytf.appendChild(yti); ys.appendChild(ytf);
+        var yrm = el("button", "danger", "remove youth speaker");
+        yrm.onclick = function () { w.youthShown = false; w.youthSpeaker = ""; w.youthTopic = ""; save(); render(); };
+        ys.appendChild(yrm);
+        zS.appendChild(ys);
+      } else {
+        var addYouth = el("button", "add-line", "+ add youth speaker");
+        addYouth.onclick = function () { w.youthShown = true; save(); render(); };
+        zS.appendChild(addYouth);
+      }
 
       (w.speakers || []).forEach(function (sp, i) {
         var row = el("div", "speaker-row");
@@ -747,8 +771,44 @@
     // ===== Ward business (private) =====
     var z2 = el("div", "zone");
     zoneHead(z2, "Ward business", null, "private - conducting only", "badge-private");
-    bindText(z2, "releases", { label: "releases", area: true, rows: 2, hint: "one per line - names only" });
-    bindText(z2, "callings", { label: "callings / sustainings", area: true, rows: 2, hint: "one per line - name, then calling" });
+
+    // structured name + calling rows (releases and sustainings)
+    function nameCallingSection(host, key, opts) {
+      if (!w[key]) w[key] = [];
+      var wrap = el("div", "field");
+      wrap.appendChild(el("label", null, opts.label));
+      (w[key]).forEach(function (r, i) {
+        var row = el("div", "speaker-row");
+        var nf = el("div", "field sp-name");
+        nf.appendChild(el("label", null, "name"));
+        var ni = el("input"); ni.type = "text"; ni.value = r.name || "";
+        ni.oninput = function () { r.name = ni.value; save(); };
+        nf.appendChild(ni); row.appendChild(nf);
+        var cf = el("div", "field"); cf.style.marginBottom = "0";
+        cf.appendChild(el("label", null, opts.callingLabel));
+        var ci = el("input"); ci.type = "text"; ci.value = r.calling || "";
+        if (opts.callingPlaceholder) ci.placeholder = opts.callingPlaceholder;
+        ci.oninput = function () { r.calling = ci.value; save(); };
+        cf.appendChild(ci); row.appendChild(cf);
+        var rm = el("button", "danger", "remove");
+        rm.onclick = function () { w[key].splice(i, 1); save(); render(); };
+        row.appendChild(rm);
+        wrap.appendChild(row);
+      });
+      var add = el("button", "add-line", opts.addLabel);
+      add.onclick = function () { w[key].push({ name: "", calling: "" }); save(); render(); };
+      wrap.appendChild(add);
+      host.appendChild(wrap);
+    }
+
+    nameCallingSection(z2, "releases", {
+      label: "releases", callingLabel: "released from",
+      callingPlaceholder: "calling", addLabel: "+ add release"
+    });
+    nameCallingSection(z2, "callings", {
+      label: "callings / sustainings", callingLabel: "called as",
+      callingPlaceholder: "calling", addLabel: "+ add calling"
+    });
     bindText(z2, "announcements", { label: "announcements", area: true, rows: 2, hint: "last-minute is fine" });
     app.appendChild(z2);
 
@@ -1217,27 +1277,33 @@
     sOpen.appendChild(csRow("Invocation", w.invocation));
 
     // ---- WARD BUSINESS ----
-    var hasBiz = w.announcements || w.releases || w.callings;
+    var relRows = (w.releases || []).filter(function (r) { return r.name || r.calling; });
+    var calRows = (w.callings || []).filter(function (r) { return r.name || r.calling; });
+    var hasBiz = w.announcements || relRows.length || calRows.length;
     if (hasBiz) {
       var sBiz = csSection(cs, "Ward Business");
       if (w.announcements) {
         sBiz.appendChild(csRow("Announcements", lines(w.announcements).join("  \u00b7  ")));
       }
-      if (w.releases) {
+      if (relRows.length) {
         sBiz.appendChild(csSay("Releases \u2014 read, then invite thanks", function (box) {
           var q = el("div", "cs-quote");
           q.appendChild(document.createTextNode("\u201cWe have released "));
-          q.appendChild(el("span", "cs-names", lines(w.releases).join(", ")));
+          var parts = relRows.map(function (r) {
+            return r.calling ? (r.name + " as " + r.calling) : r.name;
+          });
+          q.appendChild(el("span", "cs-names", parts.join(", ")));
           q.appendChild(document.createTextNode(". Those who wish to express thanks, please raise your hand.\u201d"));
           box.appendChild(q);
         }));
       }
-      if (w.callings) {
+      if (calRows.length) {
         sBiz.appendChild(csSay("Sustainings \u2014 ask each to stand", function (box) {
-          lines(w.callings).forEach(function (l) {
+          calRows.forEach(function (r) {
             var line = el("div", "cs-checkline");
             line.appendChild(el("span", "cs-box", "\u25a1"));
-            line.appendChild(el("span", "cs-names", l));
+            var label = r.calling ? (r.name + " \u2014 " + r.calling) : r.name;
+            line.appendChild(el("span", "cs-names", label));
             box.appendChild(line);
           });
           box.appendChild(el("div", "cs-quote", "\u201cAll in favor, please raise your hand. Any opposed. Thank you; you may be seated.\u201d"));
