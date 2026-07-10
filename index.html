@@ -148,9 +148,16 @@
   .doc .doc-ward { font-family: var(--serif); text-align: center; font-size: 16px; color: var(--ink); margin: 0; }
   .doc .doc-date { text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 22px; }
   .doc .rule { border: none; border-top: 1px solid var(--rule); margin: 18px 0; }
-  .doc-line { display: flex; gap: 10px; padding: 5px 0; font-size: 15px; align-items: baseline; }
-  .doc-line .dl-label { font-weight: 600; color: var(--deep); min-width: 130px; flex: 0 0 auto; }
-  .doc-line .dl-val { flex: 1; }
+  .doc-line { padding: 6px 0; font-size: 15px; line-height: 1.4; }
+  .doc-line .dl-label { font-weight: 600; color: var(--deep); display: inline; }
+  .doc-line .dl-label::after { content: ":"; }
+  .doc-line .dl-val { color: var(--ink); }
+  /* short labels stay inline; long ones (wider than the column) wrap the value under, indented */
+  .doc-line.inline { display: flex; gap: 10px; align-items: baseline; }
+  .doc-line.inline .dl-label { flex: 0 0 145px; }
+  .doc-line.inline .dl-label::after { content: ""; }
+  .doc-line.inline .dl-val { flex: 1; }
+  .doc-line.stacked .dl-val { display: block; margin-top: 2px; padding-left: 2px; }
   .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; font-weight: 600; }
   .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
 
@@ -1417,7 +1424,10 @@
   function lines(str) { return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
   function docLine(label, val) {
     if (!val) return null;
-    var row = el("div", "doc-line");
+    // long labels (won't fit the fixed column) stack the value neatly beneath;
+    // short labels stay in the aligned two-column layout
+    var stacked = label.length > 16;
+    var row = el("div", "doc-line " + (stacked ? "stacked" : "inline"));
     row.appendChild(el("span", "dl-label", label));
     row.appendChild(el("span", "dl-val", val));
     return row;
