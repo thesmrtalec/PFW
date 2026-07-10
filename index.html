@@ -143,6 +143,15 @@
   .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
   .sheet-scroll { padding: 22px 16px 60px; }
 
+  /* swipeable pair (conducting = program + brief) */
+  .pair-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; gap: 0; scrollbar-width: none; }
+  .pair-track::-webkit-scrollbar { display: none; }
+  .pair-page { flex: 0 0 100%; scroll-snap-align: center; display: flex; justify-content: center; padding: 0 4px; box-sizing: border-box; }
+  .pair-dots { display: flex; justify-content: center; gap: 8px; margin: 14px 0 2px; }
+  .pair-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--rule); transition: background .2s, width .2s; }
+  .pair-dot.active { background: var(--accent); width: 20px; }
+  .pair-label { text-align: center; font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
   .doc { max-width: 680px; margin: 0 auto; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 36px 40px; box-shadow: var(--shadow); }
   .doc h1 { font-family: var(--serif); text-align: center; font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 2px; line-height: 1.25; }
   .doc .doc-ward { font-family: var(--serif); text-align: center; font-size: 16px; color: var(--ink); margin: 0; }
@@ -249,6 +258,11 @@
     .sheet-scroll { padding: 0; }
     .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.4in 0.5in; max-width: none; }
     .cs-say, .cs-sec, .cs-row { page-break-inside: avoid; }
+    /* swipe pair -> stacked full pages, one per sheet */
+    .pair-track { display: block; overflow: visible; }
+    .pair-page { display: block; padding: 0; page-break-after: always; break-after: page; }
+    .pair-page:last-child { page-break-after: auto; break-after: auto; }
+    .pair-dots, .pair-label { display: none !important; }
     @page { margin: 0.5in; }
   }
 </style>
@@ -1114,8 +1128,8 @@
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Program \u2192");
     b1.onclick = function () { openSheet(buildProgram(w)); };
-    var b2 = el("button", "btn secondary", "Conducting brief \u2192");
-    b2.onclick = function () { openSheet(buildScript(w)); };
+    var b2 = el("button", "btn secondary", "Conducting \u2192");
+    b2.onclick = function () { openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
 
@@ -1601,14 +1615,15 @@
       var sBiz = csSection(cs, "Ward Business");
       if (relRows.length) {
         sBiz.appendChild(csSay("Releases", function (box) {
-          var q = el("div", "cs-quote");
-          q.appendChild(document.createTextNode("\u201cWe have released "));
-          var parts = relRows.map(function (r) {
-            return r.calling ? (r.name + " as " + r.calling) : r.name;
+          box.appendChild(el("div", "cs-quote", "\u201cThe following members have been released:\u201d"));
+          relRows.forEach(function (r) {
+            var line = el("div", "cs-checkline");
+            line.appendChild(el("span", "cs-box", "\u25a1"));
+            var label = r.calling ? (r.name + " \u2014 " + r.calling) : r.name;
+            line.appendChild(el("span", "cs-names", label));
+            box.appendChild(line);
           });
-          q.appendChild(el("span", "cs-names", parts.join(", ")));
-          q.appendChild(document.createTextNode(" and are thankful for their service. All who wish to give a vote of thanks please manifest it.\u201d"));
-          box.appendChild(q);
+          box.appendChild(el("div", "cs-quote", "\u201cAll who can show a vote of thanks for their service, please manifest it.\u201d"));
         }));
       }
       if (calRows.length) {
@@ -1660,10 +1675,46 @@
 
   function openSheet(node) {
     var host = document.getElementById("sheetDoc");
+    host.className = "doc";
     host.innerHTML = "";
     host.appendChild(node);
     document.getElementById("sheetOverlay").classList.add("open");
     document.querySelector(".sheet-scroll").scrollTop = 0;
+  }
+
+  // two documents in a horizontal swipe view; prints as two separate pages
+  function openSheetPair(nodeA, labelA, nodeB, labelB) {
+    var host = document.getElementById("sheetDoc");
+    host.innerHTML = "";
+    host.className = ""; // this container isn't styled as .doc in pair mode
+
+    var label = el("div", "pair-label", labelA);
+    var track = el("div", "pair-track");
+    var pageA = el("div", "pair-page"); var cardA = el("div", "doc"); cardA.appendChild(nodeA); pageA.appendChild(cardA);
+    var pageB = el("div", "pair-page"); var cardB = el("div", "doc"); cardB.appendChild(nodeB); pageB.appendChild(cardB);
+    track.appendChild(pageA); track.appendChild(pageB);
+
+    var dots = el("div", "pair-dots");
+    var d0 = el("div", "pair-dot active"), d1 = el("div", "pair-dot");
+    dots.appendChild(d0); dots.appendChild(d1);
+
+    host.appendChild(dots);
+    host.appendChild(label);
+    host.appendChild(track);
+
+    // update dot + label on swipe
+    track.addEventListener("scroll", function () {
+      var idx = Math.round(track.scrollLeft / track.clientWidth);
+      if (idx <= 0) { d0.classList.add("active"); d1.classList.remove("active"); label.textContent = labelA; }
+      else { d1.classList.add("active"); d0.classList.remove("active"); label.textContent = labelB; }
+    });
+    // tapping a dot jumps to that page
+    d0.onclick = function () { track.scrollTo({ left: 0, behavior: "smooth" }); };
+    d1.onclick = function () { track.scrollTo({ left: track.clientWidth, behavior: "smooth" }); };
+
+    document.getElementById("sheetOverlay").classList.add("open");
+    document.querySelector(".sheet-scroll").scrollTop = 0;
+    track.scrollLeft = 0;
   }
   document.getElementById("sheetClose").onclick = function () {
     document.getElementById("sheetOverlay").classList.remove("open");
