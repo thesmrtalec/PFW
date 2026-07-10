@@ -1033,7 +1033,7 @@
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Program \u2192");
     b1.onclick = function () { openSheet(buildProgram(w)); };
-    var b2 = el("button", "btn secondary", "Conducting sheet \u2192");
+    var b2 = el("button", "btn secondary", "Conducting brief \u2192");
     b2.onclick = function () { openSheet(buildScript(w)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
@@ -1488,25 +1488,32 @@
     var cs = el("div", "cs");
     doc.appendChild(cs);
 
-    cs.appendChild(el("div", "cs-title", "Conducting Sheet"));
+    cs.appendChild(el("div", "cs-title", "Conducting Brief"));
     cs.appendChild(el("div", "cs-sub", WARD));
     cs.appendChild(el("div", "cs-date", fmtDate(w.date)));
 
-    // ---- OPENING ----
-    var sOpen = csSection(cs, "Opening");
-    sOpen.appendChild(csRow("Conducting", w.conducting));
-    sOpen.appendChild(csRow("Opening hymn", w.openingHymn));
-    sOpen.appendChild(csRow("Invocation", w.invocation));
+    // This sheet is intentionally lean: ONLY what the conductor says or does
+    // that is NOT already printed on the ward program. Quiet weeks stay nearly blank.
 
-    // ---- WARD BUSINESS ----
     var relRows = (w.releases || []).filter(function (r) { return r.name || r.calling; });
     var calRows = (w.callings || []).filter(function (r) { return r.name || r.calling; });
-    var hasBiz = w.announcements || relRows.length || calRows.length;
+    var hasAnn = !!w.announcements;
+    var hasBiz = relRows.length || calRows.length;
+
+    // ---- ANNOUNCEMENTS (spoken by conductor; not on program) ----
+    if (hasAnn) {
+      var sAnn = csSection(cs, "Announcements");
+      lines(w.announcements).forEach(function (l) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        line.appendChild(el("span", null, l));
+        sAnn.appendChild(line);
+      });
+    }
+
+    // ---- WARD BUSINESS (verbatim votes; conductor only) ----
     if (hasBiz) {
       var sBiz = csSection(cs, "Ward Business");
-      if (w.announcements) {
-        sBiz.appendChild(csRow("Announcements", lines(w.announcements).join("  \u00b7  ")));
-      }
       if (relRows.length) {
         sBiz.appendChild(csSay("Releases \u2014 read, then invite thanks", function (box) {
           var q = el("div", "cs-quote");
@@ -1531,46 +1538,32 @@
           box.appendChild(el("div", "cs-quote", "\u201cAll in favor, please raise your hand. Any opposed. Thank you; you may be seated.\u201d"));
         }));
       }
-      if (w.blessings) {
-        sBiz.appendChild(csRow("Blessings / confirmations", w.blessings));
-      }
     }
 
-    // ---- SACRAMENT ----
+    // ---- TESTIMONY MEETING (conductor cue; not a program item) ----
+    if (w.testimony) {
+      var sT = csSection(cs, "Testimony Meeting");
+      sT.appendChild(csSay("After the sacrament", function (box) {
+        box.appendChild(el("div", "cs-quote",
+          "Bear a brief testimony, then invite the congregation to share. Watch time; close before the hour."));
+      }));
+    }
+
+    // ---- SACRAMENT HANDOFF (the one script that's yours to read) ----
     if (w.showSacramentBlock !== false) {
       var sSac = csSection(cs, "Sacrament");
-      sSac.appendChild(csRow("Sacrament hymn", w.sacramentHymn));
       var num = hymnNumFromValue(w.sacramentHymn);
-      sSac.appendChild(csSay("Read after the business", function (box) {
+      sSac.appendChild(csSay("Read before the sacrament hymn", function (box) {
         box.appendChild(el("div", "cs-quote",
           "\u201cWe now invite your reverence. The congregation will sing hymn #" + (num || "___") +
           ", after which the Aaronic Priesthood will administer the sacrament.\u201d"));
       }));
-    } else {
-      // still show the hymn even if the spoken block is hidden
-      var sSac2 = csSection(cs, "Sacrament");
-      sSac2.appendChild(csRow("Sacrament hymn", w.sacramentHymn));
     }
 
-    // ---- PROGRAM ----
-    var sProg = csSection(cs, "Program");
-    if (w.testimony) {
-      sProg.appendChild(csRow("Testimony meeting", "bear testimony, then invite the congregation"));
-    } else {
-      if (w.youthSpeaker) sProg.appendChild(csRow("Youth speaker", w.youthSpeaker, w.youthTopic));
-      var anyAdult = false;
-      (w.speakers || []).forEach(function (sp, i) {
-        if (sp.name) { sProg.appendChild(csRow("Speaker " + (i + 1), sp.name, sp.topic)); anyAdult = true; }
-      });
-      if (!w.youthSpeaker && !anyAdult) sProg.appendChild(csRow("Speakers", "", null, true));
+    // If the week is truly quiet, say so plainly instead of a blank page.
+    if (!hasAnn && !hasBiz && !w.testimony && w.showSacramentBlock === false) {
+      cs.appendChild(el("div", "cs-note", "No business, announcements, or scripts for this meeting \u2014 follow the program."));
     }
-    if (w.restHymn) sProg.appendChild(csRow("Rest hymn", w.restHymn));
-    if (w.musical) sProg.appendChild(csRow("Musical number", w.musical));
-
-    // ---- CLOSING ----
-    var sClose = csSection(cs, "Closing");
-    sClose.appendChild(csRow("Closing hymn", w.closingHymn));
-    sClose.appendChild(csRow("Benediction", w.benediction));
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
