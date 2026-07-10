@@ -273,16 +273,22 @@
   .fu-item .fu-new { font-family: var(--sans); font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
 
   @media print {
-    body { background: #fff; }
-    .sheet-toolbar, .wrap { display: none !important; }
-    .sheet-overlay { position: static; }
-    .sheet-scroll { padding: 0; }
-    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.25in 0.45in; max-width: none; }
+    html, body { background: #fff !important; height: auto !important; }
+    /* hide everything except the sheet overlay content */
+    .sync-pill, .sheet-toolbar, .wrap, .hp-overlay { display: none !important; }
+    .sheet-overlay {
+      position: static !important; background: #fff !important;
+      overflow: visible !important; height: auto !important; min-height: 0 !important; display: block !important;
+    }
+    .sheet-scroll { padding: 0 !important; overflow: visible !important; height: auto !important; }
+    .doc { border: none !important; box-shadow: none !important; border-radius: 0; padding: 0.25in 0.45in; max-width: none !important; margin: 0 !important; background: #fff !important; }
     .cs-say, .cs-sec, .cs-row { page-break-inside: avoid; }
+    /* single-doc view: no forced breaks, collapse to content */
+    #sheetDoc { height: auto !important; min-height: 0 !important; }
     /* swipe pair -> stacked full pages, one per sheet */
-    .pair-track { display: block; overflow: visible; }
-    .pair-page { display: block; padding: 0; page-break-after: always; break-after: page; }
-    .pair-page:last-child { page-break-after: auto; break-after: auto; }
+    .pair-track { display: block !important; overflow: visible !important; height: auto !important; }
+    .pair-page { display: block !important; padding: 0 !important; }
+    .pair-page:not(:last-child) { page-break-after: always; break-after: page; }
     .pair-dots, .pair-label { display: none !important; }
     @page { margin: 0.5in; }
   }
