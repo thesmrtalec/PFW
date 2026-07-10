@@ -80,6 +80,7 @@
   .zone-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
   .badge-public { background: var(--accent-soft); color: var(--accent); }
   .badge-private { background: #f0e9ef; color: #7a4f74; }
+  .sub-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-top: 12px; border-top: 1px dashed var(--rule); }
 
   .field { margin-bottom: 12px; }
   .field:last-child { margin-bottom: 4px; }
@@ -337,6 +338,7 @@
 <div class="sync-pill hidden" id="syncPill"></div>
 <datalist id="dl-names"></datalist>
 <datalist id="dl-callings"></datalist>
+<datalist id="dl-assignees"></datalist>
 <div class="wrap" id="app"></div>
 
 <div class="sheet-overlay" id="sheetOverlay">
@@ -498,9 +500,10 @@
 
   // Harvest distinct names / callings from everything already entered.
   function harvestSuggestions() {
-    var names = {}, callings = {};
+    var names = {}, callings = {}, assignees = {};
     function addName(v) { v = (v || "").trim(); if (v) names[v] = 1; }
     function addCalling(v) { v = (v || "").trim(); if (v) callings[v] = 1; }
+    function addAssignee(v) { v = (v || "").trim(); if (v) assignees[v] = 1; }
     (state.weeks || []).forEach(function (w) {
       (w.speakers || []).forEach(function (s) { addName(s.name); });
       addName(w.youthSpeaker);
@@ -511,10 +514,14 @@
       (m.counsel || []).forEach(function (c) { addName(c.name); });
       (m.callings || []).forEach(function (c) { addName(c.name); addCalling(c.calling); });
     });
-    (state.assignments || []).forEach(function (a) { addName(a.who); });
+    // Assignees are a small, closed set (the bishopric + a few helpers). Keep
+    // their suggestions SEPARATE from the general name pool so this field only
+    // ever offers people who've actually been assigned something before.
+    (state.assignments || []).forEach(function (a) { addAssignee(a.who); });
     return {
       names: Object.keys(names).sort(function (a, b) { return a.localeCompare(b); }),
-      callings: Object.keys(callings).sort(function (a, b) { return a.localeCompare(b); })
+      callings: Object.keys(callings).sort(function (a, b) { return a.localeCompare(b); }),
+      assignees: Object.keys(assignees).sort(function (a, b) { return a.localeCompare(b); })
     };
   }
   // Populate the shared <datalist> elements from current data.
@@ -522,6 +529,7 @@
     var s = harvestSuggestions();
     fillList("dl-names", s.names);
     fillList("dl-callings", s.callings);
+    fillList("dl-assignees", s.assignees);
   }
   function fillList(id, items) {
     var dl = document.getElementById(id);
@@ -1405,7 +1413,7 @@
     var addWrap = el("div", "asg-add");
     var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
     whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;";
-    whoIn.setAttribute("list", "dl-names"); whoIn.setAttribute("autocomplete", "off");
+    whoIn.setAttribute("list", "dl-assignees"); whoIn.setAttribute("autocomplete", "off");
     var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
     whatIn.style.cssText = whoIn.style.cssText;
     var addBtn = el("button", "btn", "Add");
@@ -1419,7 +1427,7 @@
     zA.appendChild(addWrap);
     app.appendChild(zA);
 
-    // ===== COUNSEL TOGETHER =====
+    // ===== COUNSEL TOGETHER (people + ministering, one section) =====
     var zC = el("div", "zone");
     zoneHead(zC, "Counsel together", "who needs us");
     zC.appendChild(el("div", "hint", "Names to counsel about \u2014 individuals and families, especially youth. Keep it to names and a short note, not sensitive detail."));
@@ -1444,18 +1452,15 @@
     var addC = el("button", "add-line", "+ add person / family");
     addC.onclick = function () { if (!m.counsel) m.counsel = []; m.counsel.push({ id: uid(), name: "", note: "" }); save(); render(); };
     zC.appendChild(addC);
+    // ministering folded in here (was its own section) \u2014 same conversation
+    zC.appendChild(el("div", "sub-label", "Ministering"));
+    textField(zC, function () { return m.ministering; }, function (v) { m.ministering = v; }, { area: true, rows: 2, hint: "status / who needs a visit / assignments to make" });
     app.appendChild(zC);
 
-    // ===== MINISTERING =====
-    var zMin = el("div", "zone");
-    zoneHead(zMin, "Ministering");
-    textField(zMin, function () { return m.ministering; }, function (v) { m.ministering = v; }, { area: true, rows: 2, hint: "status / who needs a visit / assignments to make" });
-    app.appendChild(zMin);
-
-    // ===== ORDINANCES & ADVANCEMENT =====
+    // ===== COVENANT PATH PROGRESS =====
     var zOrd = el("div", "zone");
-    zoneHead(zOrd, "Ordinances & advancement");
-    textField(zOrd, function () { return m.ordinances; }, function (v) { m.ordinances = v; }, { area: true, rows: 2, hint: "blessings, baptisms, ordinations, YW/AP advancement \u2014 one per line" });
+    zoneHead(zOrd, "Covenant path progress");
+    textField(zOrd, function () { return m.ordinances; }, function (v) { m.ordinances = v; }, { area: true, rows: 2, hint: "blessings, baptisms, ordinations, YW/AP advancement, temple prep \u2014 one per line" });
     app.appendChild(zOrd);
 
     // ===== CALLINGS PIPELINE =====
@@ -1572,10 +1577,10 @@
       cs.appendChild(sMin);
     }
 
-    // ordinances
+    // covenant path progress (stored under the legacy "ordinances" key)
     if (m.ordinances) {
       var sO = el("div", "cs-sec");
-      sO.appendChild(el("div", "cs-h", "Ordinances & Advancement"));
+      sO.appendChild(el("div", "cs-h", "Covenant Path Progress"));
       sO.appendChild(el("hr", "cs-hrule"));
       lines(m.ordinances).forEach(function (l) {
         var line = el("div", "cs-checkline");
