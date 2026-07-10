@@ -28,19 +28,16 @@
   }
   .wrap { max-width: 620px; margin: 0 auto; padding: 20px 18px 80px; }
 
-  /* header */
   .top { text-align: center; padding: 8px 0 18px; border-bottom: 2px solid var(--deep); margin-bottom: 22px; }
   .top h1 { font-family: var(--serif); font-weight: 600; font-size: 27px; letter-spacing: .01em; color: var(--deep); margin: 0; }
   .top .sub { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
 
-  /* buttons */
   button { font-family: var(--sans); cursor: pointer; }
   .btn { background: var(--deep); color: #fff; border: none; border-radius: 9px; padding: 12px 18px; font-size: 15px; font-weight: 600; }
   .btn:active { opacity: .9; }
   .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 16px; font-size: 14px; font-weight: 500; }
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
 
-  /* week list */
   .list-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
   .list-head .eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
   .week-card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 15px 16px; margin-bottom: 11px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 14px; cursor: pointer; }
@@ -48,16 +45,15 @@
   .week-when { flex: 1; }
   .week-date { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--deep); }
   .week-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .week-chev { color: var(--faint); font-size: 20px; }
   .week-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
   .week-tag.past { background: #eceef1; color: var(--faint); }
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-family: var(--serif); font-style: italic; font-size: 17px; }
 
-  /* editor */
   .back-link { background: transparent; border: none; color: var(--accent); font-size: 15px; padding: 0; margin-bottom: 14px; font-weight: 500; }
   .zone { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 4px 16px 14px; margin-bottom: 18px; box-shadow: var(--shadow); }
   .zone-head { display: flex; align-items: center; gap: 10px; padding: 14px 0 6px; border-bottom: 1px solid var(--rule); margin-bottom: 10px; }
   .zone-head h2 { font-family: var(--serif); font-size: 19px; font-weight: 600; color: var(--deep); margin: 0; flex: 1; }
+  .zone-head .who { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
   .zone-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
   .badge-public { background: var(--accent-soft); color: var(--accent); }
   .badge-private { background: #f0e9ef; color: #7a4f74; }
@@ -65,22 +61,18 @@
   .field { margin-bottom: 12px; }
   .field:last-child { margin-bottom: 4px; }
   .field label { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
-  .field input, .field textarea {
+  .field input, .field textarea, .field select {
     width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
     border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: #fff; color: var(--ink);
     -webkit-appearance: none; appearance: none;
   }
-  .field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .field textarea { resize: vertical; min-height: 62px; line-height: 1.45; }
   .field .hint { font-size: 12px; color: var(--faint); margin-top: 4px; font-style: italic; }
 
-  /* speaker rows */
   .speaker-row { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfd; }
   .speaker-row .sp-name { margin-bottom: 8px; }
   .sp-topic label { color: var(--accent); }
-  .sp-topic label::after { content: " · leadership only"; color: var(--faint); font-weight: 400; letter-spacing: 0; text-transform: none; }
-  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  @media (max-width: 460px) { .row-2 { grid-template-columns: 1fr; } }
 
   .add-line { background: transparent; border: 1px dashed var(--rule); color: var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: var(--mono); width: 100%; margin-top: 2px; }
   .add-line:active { border-color: var(--accent); color: var(--accent); }
@@ -91,30 +83,7 @@
 
   .danger { background: transparent; border: none; color: #a3453a; font-size: 13px; margin-top: 6px; padding: 6px; }
 
-  /* ---- print / output view ---- */
-  .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
-  .sheet-overlay.open { display: block; }
-  .sheet-toolbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
-  .sheet-toolbar .btn { padding: 9px 16px; }
-  .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
-  .sheet-scroll { padding: 22px 16px 60px; }
-
-  .doc { max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 40px 44px; box-shadow: var(--shadow); }
-  .doc h1 { font-family: var(--serif); text-align: center; font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 2px; line-height: 1.25; }
-  .doc .doc-ward { font-family: var(--serif); text-align: center; font-size: 16px; color: var(--ink); margin: 0; }
-  .doc .doc-date { text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 26px; }
-  .doc .rule { border: none; border-top: 1px solid var(--rule); margin: 20px 0; }
-  .doc-line { display: flex; gap: 10px; padding: 5px 0; font-size: 15px; align-items: baseline; }
-  .doc-line .dl-label { font-weight: 600; color: var(--deep); min-width: 130px; flex: 0 0 auto; }
-  .doc-line .dl-val { flex: 1; }
-  .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 22px 0 8px; font-weight: 600; }
-  .doc-track { font-size: 15px; line-height: 1.6; margin: 4px 0 12px; }
-  .doc-track .names { font-weight: 600; }
-  .doc-track .say { color: var(--ink); }
-  .doc-track .cue { color: var(--muted); font-style: italic; }
-  .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
-
-  /* ---- hymn picker ---- */
+  /* hymn field trigger */
   .hymn-trigger {
     width: 100%; box-sizing: border-box; text-align: left; font-family: var(--sans);
     font-size: 16px; border: 1px solid var(--rule); border-radius: 8px;
@@ -124,7 +93,7 @@
   .hymn-trigger:active { border-color: var(--accent); }
   .hymn-trigger .ht-val { flex: 1; }
   .hymn-trigger.empty .ht-val { color: var(--faint); font-style: italic; }
-  .hymn-trigger .ht-clear { color: var(--faint); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .hymn-trigger .ht-clear { color: var(--faint); font-size: 20px; line-height: 1; padding: 0 4px; }
   .hymn-trigger .ht-chev { color: var(--faint); font-size: 13px; }
 
   .hp-overlay { position: fixed; inset: 0; background: rgba(28,36,48,.4); z-index: 200; display: none; align-items: flex-end; }
@@ -132,54 +101,92 @@
   .hp-panel {
     background: var(--paper); width: 100%; max-width: 620px; margin: 0 auto;
     border-radius: 16px 16px 0 0; max-height: 88vh; display: flex; flex-direction: column;
-    box-shadow: 0 -4px 24px rgba(28,36,48,.18);
-    padding-bottom: env(safe-area-inset-bottom);
+    box-shadow: 0 -4px 24px rgba(28,36,48,.18); padding-bottom: env(safe-area-inset-bottom);
   }
   .hp-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--rule); }
-  .hp-head .hp-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--deep); margin-bottom: 10px; text-align: center; }
+  .hp-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--deep); margin-bottom: 10px; text-align: center; }
   .hp-search {
     width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
     border: 1px solid var(--rule); border-radius: 9px; padding: 11px 13px; background: #fff; color: var(--ink);
     -webkit-appearance: none; appearance: none;
   }
   .hp-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .hp-tabs { display: flex; gap: 6px; margin-top: 10px; }
+  .hp-tab { flex: 1; text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 7px 4px; border-radius: 7px; border: 1px solid var(--rule); background: #fff; color: var(--muted); }
+  .hp-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
   .hp-list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0 8px; }
   .hp-row { display: flex; align-items: baseline; gap: 12px; padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #eef0f3; }
   .hp-row:active { background: var(--accent-soft); }
-  .hp-row .hp-num { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); min-width: 34px; flex: 0 0 auto; }
-  .hp-row .hp-name { flex: 1; font-size: 15px; color: var(--ink); }
+  .hp-num { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); min-width: 44px; flex: 0 0 auto; }
+  .hp-name { flex: 1; font-size: 15px; color: var(--ink); }
   .hp-empty { text-align: center; color: var(--muted); font-family: var(--serif); font-style: italic; padding: 30px 16px; }
   .hp-cancel { border-top: 1px solid var(--rule); text-align: center; padding: 13px; color: var(--accent); font-weight: 600; font-size: 15px; background: #fff; }
+
+  /* output */
+  .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
+  .sheet-overlay.open { display: block; }
+  .sheet-toolbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
+  .sheet-toolbar .btn { padding: 9px 16px; }
+  .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
+  .sheet-scroll { padding: 22px 16px 60px; }
+
+  .doc { max-width: 680px; margin: 0 auto; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 36px 40px; box-shadow: var(--shadow); }
+  .doc h1 { font-family: var(--serif); text-align: center; font-size: 22px; font-weight: 600; color: var(--ink); margin: 0 0 2px; line-height: 1.25; }
+  .doc .doc-ward { font-family: var(--serif); text-align: center; font-size: 16px; color: var(--ink); margin: 0; }
+  .doc .doc-date { text-align: center; font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 22px; }
+  .doc .rule { border: none; border-top: 1px solid var(--rule); margin: 18px 0; }
+  .doc-line { display: flex; gap: 10px; padding: 5px 0; font-size: 15px; align-items: baseline; }
+  .doc-line .dl-label { font-weight: 600; color: var(--deep); min-width: 130px; flex: 0 0 auto; }
+  .doc-line .dl-val { flex: 1; }
+  .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; font-weight: 600; }
+  .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* chart script */
+  .chart { width: 100%; border-collapse: collapse; margin: 4px 0 8px; }
+  .chart td, .chart th { text-align: left; vertical-align: top; padding: 6px 8px; font-size: 14px; border-bottom: 1px solid #e9ecf0; }
+  .chart th { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; border-bottom: 1.5px solid var(--rule); }
+  .chart .c-item { font-weight: 600; color: var(--deep); width: 34%; }
+  .chart .c-who { width: 34%; }
+  .chart .c-detail { color: var(--muted); }
+  .chart tr.spacer td { border-bottom: none; height: 6px; padding: 0; }
+  .biz { font-size: 13.5px; line-height: 1.5; margin: 2px 0 6px; }
+  .biz .cue { color: var(--muted); font-style: italic; }
+  .biz .names { font-weight: 600; color: var(--deep); }
 
   @media print {
     body { background: #fff; }
     .sheet-toolbar, .wrap { display: none !important; }
     .sheet-overlay { position: static; }
     .sheet-scroll { padding: 0; }
-    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.5in; max-width: none; }
+    .doc { border: none; box-shadow: none; border-radius: 0; padding: 0.4in 0.5in; max-width: none; }
+    .chart td, .chart th { padding: 5px 8px; }
+    @page { margin: 0.5in; }
   }
 </style>
 </head>
 <body>
 <div class="wrap" id="app"></div>
 
-<!-- output overlay -->
 <div class="sheet-overlay" id="sheetOverlay">
   <div class="sheet-toolbar">
-    <button class="close" id="sheetClose">‹ back</button>
+    <button class="close" id="sheetClose">&lsaquo; back</button>
     <button class="btn" id="sheetPrint">Print / Save PDF</button>
   </div>
   <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
 </div>
 
-<!-- hymn picker overlay -->
 <div class="hp-overlay" id="hpOverlay">
   <div class="hp-panel">
     <div class="hp-head">
       <div class="hp-title" id="hpTitle">Choose a hymn</div>
       <input class="hp-search" id="hpSearch" type="text" inputmode="text"
-        placeholder="type a number or a word — e.g. 66 or rejoice"
+        placeholder="type a number or a word - e.g. 66 or rejoice"
         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+      <div class="hp-tabs" id="hpTabs">
+        <div class="hp-tab active" data-book="all">All</div>
+        <div class="hp-tab" data-book="85">Hymnbook (1985)</div>
+        <div class="hp-tab" data-book="HC">Home &amp; Church</div>
+      </div>
     </div>
     <div class="hp-list" id="hpList"></div>
     <div class="hp-cancel" id="hpCancel">Cancel</div>
@@ -191,108 +198,149 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
-  // ---- hymn picker ----
   var HYMNS = [
-    {n:1,t:'The Morning Breaks'},{n:2,t:'The Spirit of God'},{n:3,t:'Now Let Us Rejoice'},{n:4,t:'Truth Eternal'},{n:5,t:'High on the Mountain Top'},{n:6,t:'Redeemer of Israel'},
-    {n:7,t:'Israel, Israel, God Is Calling'},{n:8,t:'Awake and Arise'},{n:9,t:'Come, Rejoice'},{n:10,t:'Come, Sing to the Lord'},{n:11,t:'What Was Witnessed in the Heavens?'},{n:12,t:'\'Twas Witnessed in the Morning Sky'},
-    {n:13,t:'An Angel from on High'},{n:14,t:'Sweet Is the Peace the Gospel Brings'},{n:15,t:'I Saw a Mighty Angel Fly'},{n:16,t:'What Glorious Scenes Mine Eyes Behold'},{n:17,t:'Awake, Ye Saints of God, Awake!'},{n:18,t:'The Voice of God Again Is Heard'},
-    {n:19,t:'We Thank Thee, O God, for a Prophet'},{n:20,t:'God of Power, God of Right'},{n:21,t:'Come, Listen to a Prophet\'s Voice'},{n:22,t:'We Listen to a Prophet\'s Voice'},{n:23,t:'We Ever Pray for Thee'},{n:24,t:'God Bless Our Prophet Dear'},
-    {n:25,t:'Now We\'ll Sing with One Accord'},{n:26,t:'Joseph Smith\'s First Prayer'},{n:27,t:'Praise to the Man'},{n:28,t:'Saints, Behold How Great Jehovah'},{n:29,t:'A Poor Wayfaring Man of Grief'},{n:30,t:'Come, Come, Ye Saints'},
-    {n:31,t:'O God, Our Help in Ages Past'},{n:32,t:'The Happy Day at Last Has Come'},{n:33,t:'Our Mountain Home So Dear'},{n:34,t:'O Ye Mountains High'},{n:35,t:'For the Strength of the Hills'},{n:36,t:'They, the Builders of the Nation'},
-    {n:37,t:'The Wintry Day, Descending to Its Close'},{n:38,t:'Come, All Ye Saints of Zion'},{n:39,t:'O Saints of Zion'},{n:40,t:'Arise, O Glorious Zion'},{n:41,t:'Let Zion in Her Beauty Rise'},{n:42,t:'Hail to the Brightness of Zion\'s Glad Morning!'},
-    {n:43,t:'Zion Stands with Hills Surrounded'},{n:44,t:'Beautiful Zion, Built Above'},{n:45,t:'Lead Me into Life Eternal'},{n:46,t:'Glorious Things of Thee Are Spoken'},{n:47,t:'We Will Sing of Zion'},{n:48,t:'Glorious Things Are Sung of Zion'},
-    {n:49,t:'Adam-ondi-Ahman'},{n:50,t:'Come, Thou Glorious Day of Promise'},{n:51,t:'Sons of Michael, He Approaches'},{n:52,t:'The Day Dawn Is Breaking'},{n:53,t:'Let Earth\'s Inhabitants Rejoice'},{n:54,t:'Behold, the Mountain of the Lord'},
-    {n:55,t:'Lo, the Mighty God Appearing!'},{n:56,t:'Softly Beams the Sacred Dawning'},{n:57,t:'We\'re Not Ashamed to Own Our Lord'},{n:58,t:'Come, Ye Children of the Lord'},{n:59,t:'Come, O Thou King of Kings'},{n:60,t:'Battle Hymn of the Republic'},
-    {n:61,t:'Raise Your Voices to the Lord'},{n:62,t:'All Creatures of Our God and King'},{n:63,t:'Great King of Heaven'},{n:64,t:'On This Day of Joy and Gladness'},{n:65,t:'Come, All Ye Saints Who Dwell on Earth'},{n:66,t:'Rejoice, the Lord Is King!'},
-    {n:67,t:'Glory to God on High'},{n:68,t:'A Mighty Fortress Is Our God'},{n:69,t:'All Glory, Laud, and Honor'},{n:70,t:'Sing Praise to Him'},{n:71,t:'With Songs of Praise'},{n:72,t:'Praise to the Lord, the Almighty'},
-    {n:73,t:'Praise the Lord with Heart and Voice'},{n:74,t:'Praise Ye the Lord'},{n:75,t:'In Hymns of Praise'},{n:76,t:'God of Our Fathers, We Come unto Thee'},{n:77,t:'Great Is the Lord'},{n:78,t:'God of Our Fathers, Whose Almighty Hand'},
-    {n:79,t:'With All the Power of Heart and Tongue'},{n:80,t:'God of Our Fathers, Known of Old'},{n:81,t:'Press Forward, Saints'},{n:82,t:'For All the Saints'},{n:83,t:'Guide Us, O Thou Great Jehovah'},{n:84,t:'Faith of Our Fathers'},
-    {n:85,t:'How Firm a Foundation'},{n:86,t:'How Great Thou Art'},{n:87,t:'God Is Love'},{n:88,t:'Great God, Attend While Zion Sings'},{n:89,t:'The Lord Is My Light'},{n:90,t:'From All That Dwell below the Skies'},
-    {n:91,t:'Father, Thy Children to Thee Now Raise'},{n:92,t:'For the Beauty of the Earth'},{n:93,t:'Prayer of Thanksgiving'},{n:94,t:'Come, Ye Thankful People'},{n:95,t:'Now Thank We All Our God'},{n:96,t:'Dearest Children, God Is Near You'},
-    {n:97,t:'Lead, Kindly Light'},{n:98,t:'I Need Thee Every Hour'},{n:99,t:'Nearer, Dear Savior, to Thee'},{n:100,t:'Nearer, My God, to Thee'},{n:101,t:'Guide Me to Thee'},{n:102,t:'Jesus, Lover of My Soul'},
-    {n:103,t:'Precious Savior, Dear Redeemer'},{n:104,t:'Jesus, Savior, Pilot Me'},{n:105,t:'Master, the Tempest Is Raging'},{n:106,t:'God Speed the Right'},{n:107,t:'Lord, Accept Our True Devotion'},{n:108,t:'The Lord Is My Shepherd'},
-    {n:109,t:'The Lord My Pasture Will Prepare'},{n:110,t:'Cast Thy Burden upon the Lord'},{n:111,t:'Rock of Ages'},{n:112,t:'Savior, Redeemer of My Soul'},{n:113,t:'Our Savior\'s Love'},{n:114,t:'Come unto Him'},
-    {n:115,t:'Come, Ye Disconsolate'},{n:116,t:'Come, Follow Me'},{n:117,t:'Come unto Jesus'},{n:118,t:'Ye Simple Souls Who Stray'},{n:119,t:'Come, We That Love the Lord'},{n:120,t:'Lean on My Ample Arm'},
-    {n:121,t:'I\'m a Pilgrim, I\'m a Stranger'},{n:122,t:'Though Deepening Trials'},{n:123,t:'Oh, May My Soul Commune with Thee'},{n:124,t:'Be Still, My Soul'},{n:125,t:'How Gentle God\'s Commands'},{n:126,t:'How Long, O Lord Most Holy and True'},
-    {n:127,t:'Does the Journey Seem Long?'},{n:128,t:'When Faith Endures'},{n:129,t:'Where Can I Turn for Peace?'},{n:130,t:'Be Thou Humble'},{n:131,t:'More Holiness Give Me'},{n:132,t:'God Is in His Holy Temple'},
-    {n:133,t:'Father in Heaven'},{n:134,t:'I Believe in Christ'},{n:135,t:'My Redeemer Lives'},{n:136,t:'I Know That My Redeemer Lives'},{n:137,t:'Testimony'},{n:138,t:'Bless Our Fast, We Pray'},
-    {n:139,t:'In Fasting We Approach Thee'},{n:140,t:'Did You Think to Pray?'},{n:141,t:'Jesus, the Very Thought of Thee'},{n:142,t:'Sweet Hour of Prayer'},{n:143,t:'Let the Holy Spirit Guide'},{n:144,t:'Secret Prayer'},
-    {n:145,t:'Prayer Is the Soul\'s Sincere Desire'},{n:146,t:'Gently Raise the Sacred Strain'},{n:147,t:'Sweet Is the Work'},{n:148,t:'Sabbath Day'},{n:149,t:'As the Dew from Heaven Distilling'},{n:150,t:'O Thou Kind and Gracious Father'},
-    {n:151,t:'We Meet, Dear Lord'},{n:152,t:'God Be with You Till We Meet Again'},{n:153,t:'Lord, We Ask Thee Ere We Part'},{n:154,t:'Father, This Hour Has Been One of Joy'},{n:155,t:'We Have Partaken of Thy Love'},{n:156,t:'Sing We Now at Parting'},
-    {n:157,t:'Thy Spirit, Lord, Has Stirred Our Souls'},{n:158,t:'Before Thee, Lord, I Bow My Head'},{n:159,t:'Now the Day Is Over'},{n:160,t:'Softly Now the Light of Day'},{n:161,t:'The Lord Be with Us'},{n:162,t:'Lord, We Come before Thee Now'},
-    {n:163,t:'Lord, Dismiss Us with Thy Blessing'},{n:164,t:'Great God, to Thee My Evening Song'},{n:165,t:'Abide with Me; \'Tis Eventide'},{n:166,t:'Abide with Me!'},{n:167,t:'Come, Let Us Sing an Evening Hymn'},{n:168,t:'As the Shadows Fall'},
-    {n:169,t:'As Now We Take the Sacrament'},{n:170,t:'God, Our Father, Hear Us Pray'},{n:171,t:'With Humble Heart'},{n:172,t:'In Humility, Our Savior'},{n:173,t:'While of These Emblems We Partake (AABERG)'},{n:174,t:'While of These Emblems We Partake (SAINTSBURY)'},
-    {n:175,t:'O God, the Eternal Father'},{n:176,t:'\'Tis Sweet to Sing the Matchless Love (MEREDITH)'},{n:177,t:'\'Tis Sweet to Sing the Matchless Love (HANCOCK)'},{n:178,t:'O Lord of Hosts'},{n:179,t:'Again, Our Dear Redeeming Lord'},{n:180,t:'Father in Heaven, We Do Believe'},
-    {n:181,t:'Jesus of Nazareth, Savior and King'},{n:182,t:'We\'ll Sing All Hail to Jesus\' Name'},{n:183,t:'In Remembrance of Thy Suffering'},{n:184,t:'Upon the Cross of Calvary'},{n:185,t:'Reverently and Meekly Now'},{n:186,t:'Again We Meet around the Board'},
-    {n:187,t:'God Loved Us, So He Sent His Son'},{n:188,t:'Thy Will, O Lord, Be Done'},{n:189,t:'O Thou, Before the World Began'},{n:190,t:'In Memory of the Crucified'},{n:191,t:'Behold the Great Redeemer Die'},{n:192,t:'He Died! The Great Redeemer Died'},
-    {n:193,t:'I Stand All Amazed'},{n:194,t:'There Is a Green Hill Far Away'},{n:195,t:'How Great the Wisdom and the Love'},{n:196,t:'Jesus, Once of Humble Birth'},{n:197,t:'O Savior, Thou Who Wearest a Crown'},{n:198,t:'That Easter Morn'},
-    {n:199,t:'He Is Risen!'},{n:200,t:'Christ the Lord Is Risen Today'},{n:201,t:'Joy to the World'},{n:202,t:'Oh, Come, All Ye Faithful'},{n:203,t:'Angels We Have Heard on High'},{n:204,t:'Silent Night'},
-    {n:205,t:'Once in Royal David\'s City'},{n:206,t:'Away in a Manger'},{n:207,t:'It Came upon the Midnight Clear'},{n:208,t:'O Little Town of Bethlehem'},{n:209,t:'Hark! The Herald Angels Sing'},{n:210,t:'With Wondering Awe'},
-    {n:211,t:'While Shepherds Watched Their Flocks'},{n:212,t:'Far, Far Away on Judea\'s Plains'},{n:213,t:'The First Noel'},{n:214,t:'I Heard the Bells on Christmas Day'},{n:215,t:'Ring Out, Wild Bells'},{n:216,t:'We Are Sowing'},
-    {n:217,t:'Come, Let Us Anew'},{n:218,t:'We Give Thee But Thine Own'},{n:219,t:'Because I Have Been Given Much'},{n:220,t:'Lord, I Would Follow Thee'},{n:221,t:'Dear to the Heart of the Shepherd'},{n:222,t:'Hear Thou Our Hymn, O Lord'},
-    {n:223,t:'Have I Done Any Good?'},{n:224,t:'I Have Work Enough to Do'},{n:225,t:'We Are Marching On to Glory'},{n:226,t:'Improve the Shining Moments'},{n:227,t:'There Is Sunshine in My Soul Today'},{n:228,t:'You Can Make the Pathway Bright'},
-    {n:229,t:'Today, While the Sun Shines'},{n:230,t:'Scatter Sunshine'},{n:231,t:'Father, Cheer Our Souls Tonight'},{n:232,t:'Let Us Oft Speak Kind Words'},{n:233,t:'Nay, Speak No Ill'},{n:234,t:'Jesus, Mighty King in Zion'},
-    {n:235,t:'Should You Feel Inclined to Censure'},{n:236,t:'Lord, Accept into Thy Kingdom'},{n:237,t:'Do What Is Right'},{n:238,t:'Behold Thy Sons and Daughters, Lord'},{n:239,t:'Choose the Right'},{n:240,t:'Know This, That Every Soul Is Free'},
-    {n:241,t:'Count Your Blessings'},{n:242,t:'Praise God, from Whom All Blessings Flow'},{n:243,t:'Let Us All Press On'},{n:244,t:'Come Along, Come Along'},{n:245,t:'This House We Dedicate to Thee'},{n:246,t:'Onward, Christian Soldiers'},
-    {n:247,t:'We Love Thy House, O God'},{n:248,t:'Up, Awake, Ye Defenders of Zion'},{n:249,t:'Called to Serve'},{n:250,t:'We Are All Enlisted'},{n:251,t:'Behold! A Royal Army'},{n:252,t:'Put Your Shoulder to the Wheel'},
-    {n:253,t:'Like Ten Thousand Legions Marching'},{n:254,t:'True to the Faith'},{n:255,t:'Carry On'},{n:256,t:'As Zion\'s Youth in Latter Days'},{n:257,t:'Rejoice! A Glorious Sound Is Heard'},{n:258,t:'O Thou Rock of Our Salvation'},
-    {n:259,t:'Hope of Israel'},{n:260,t:'Who\'s on the Lord\'s Side?'},{n:261,t:'Thy Servants Are Prepared'},{n:262,t:'Go, Ye Messengers of Glory'},{n:263,t:'Go Forth with Faith'},{n:264,t:'Hark, All Ye Nations!'},
-    {n:265,t:'Arise, O God, and Shine'},{n:266,t:'The Time Is Far Spent'},{n:267,t:'How Wondrous and Great'},{n:268,t:'Come, All Whose Souls Are Lighted'},{n:269,t:'Jehovah, Lord of Heaven and Earth'},{n:270,t:'I\'ll Go Where You Want Me to Go'},
-    {n:271,t:'Oh, Holy Words of Truth and Love'},{n:272,t:'Oh Say, What Is Truth?'},{n:273,t:'Truth Reflects upon Our Senses'},{n:274,t:'The Iron Rod'},{n:275,t:'Men Are That They Might Have Joy'},{n:276,t:'Come Away to the Sunday School'},
-    {n:277,t:'As I Search the Holy Scriptures'},{n:278,t:'Thanks for the Sabbath School'},{n:279,t:'Thy Holy Word'},{n:280,t:'Welcome, Welcome, Sabbath Morning'},{n:281,t:'Help Me Teach with Inspiration'},{n:282,t:'We Meet Again as Sisters'},
-    {n:283,t:'The Glorious Gospel Light Has Shone'},{n:284,t:'If You Could Hie to Kolob'},{n:285,t:'God Moves in a Mysterious Way'},{n:286,t:'Oh, What Songs of the Heart'},{n:287,t:'Rise, Ye Saints, and Temples Enter'},{n:288,t:'How Beautiful Thy Temples, Lord'},
-    {n:289,t:'Holy Temples on Mount Zion'},{n:290,t:'Rejoice, Ye Saints of Latter Days'},{n:291,t:'Turn Your Hearts'},{n:292,t:'O My Father'},{n:293,t:'Each Life That Touches Ours for Good'},{n:294,t:'Love at Home'},
-    {n:295,t:'O Love That Glorifies the Son'},{n:296,t:'Our Father, by Whose Name'},{n:297,t:'From Homes of Saints Glad Songs Arise'},{n:298,t:'Home Can Be a Heaven on Earth'},{n:299,t:'Children of Our Heavenly Father'},{n:300,t:'Families Can Be Together Forever'},
-    {n:301,t:'I Am a Child of God'},{n:302,t:'I Know My Father Lives'},{n:303,t:'Keep the Commandments'},{n:304,t:'Teach Me to Walk in the Light'},{n:305,t:'The Light Divine'},{n:306,t:'God\'s Daily Care'},
-    {n:307,t:'In Our Lovely Deseret'},{n:308,t:'Love One Another'},{n:309,t:'As Sisters in Zion'},{n:310,t:'A Key Was Turned in Latter Days'},{n:311,t:'We Meet Again in Sabbath School'},{n:312,t:'We Ever Pray for Thee (women)'},
-    {n:313,t:'God Is Love (women)'},{n:314,t:'How Gentle God\'s Commands (men)'},{n:315,t:'Jesus, the Very Thought of Thee (men)'},{n:316,t:'The Lord Is My Shepherd (men)'},{n:317,t:'Sweet Is the Work (men)'},{n:318,t:'Love at Home (men)'},
-    {n:319,t:'Ye Elders of Israel'},{n:320,t:'The Priesthood of Our Lord'},{n:321,t:'Ye Who Are Called to Labor'},{n:322,t:'Come, All Ye Sons of God'},{n:323,t:'Rise Up, O Men of God (FESTAL SONG)'},{n:324,t:'Rise Up, O Men of God (mixed)'},
-    {n:325,t:'See the Mighty Priesthood Gathered'},{n:326,t:'Come, Come, Ye Saints (men)'},{n:327,t:'Go, Ye Messengers of Heaven'},{n:328,t:'An Angel from on High (men)'},{n:329,t:'Thy Servants Are Prepared (men)'},{n:330,t:'See, the Mighty Angel Flying'},
-    {n:331,t:'Oh Say, What Is Truth? (men)'},{n:332,t:'Come, O Thou King of Kings (men)'},{n:333,t:'High on the Mountain Top (men)'},{n:334,t:'I Need Thee Every Hour (men)'},{n:335,t:'Brightly Beams Our Father\'s Mercy'},{n:336,t:'School Thy Feelings'},
-    {n:337,t:'O Home Beloved'},{n:338,t:'America the Beautiful'},{n:339,t:'My Country, \'Tis of Thee'},{n:340,t:'The Star-Spangled Banner'},{n:341,t:'God Save the King'}
+    {n:1,t:'The Morning Breaks',b:'85'},{n:2,t:'The Spirit of God',b:'85'},{n:3,t:'Now Let Us Rejoice',b:'85'},{n:4,t:'Truth Eternal',b:'85'},{n:5,t:'High on the Mountain Top',b:'85'},
+    {n:6,t:'Redeemer of Israel',b:'85'},{n:7,t:'Israel, Israel, God Is Calling',b:'85'},{n:8,t:'Awake and Arise',b:'85'},{n:9,t:'Come, Rejoice',b:'85'},{n:10,t:'Come, Sing to the Lord',b:'85'},
+    {n:11,t:'What Was Witnessed in the Heavens?',b:'85'},{n:12,t:'\'Twas Witnessed in the Morning Sky',b:'85'},{n:13,t:'An Angel from on High',b:'85'},{n:14,t:'Sweet Is the Peace the Gospel Brings',b:'85'},{n:15,t:'I Saw a Mighty Angel Fly',b:'85'},
+    {n:16,t:'What Glorious Scenes Mine Eyes Behold',b:'85'},{n:17,t:'Awake, Ye Saints of God, Awake!',b:'85'},{n:18,t:'The Voice of God Again Is Heard',b:'85'},{n:19,t:'We Thank Thee, O God, for a Prophet',b:'85'},{n:20,t:'God of Power, God of Right',b:'85'},
+    {n:21,t:'Come, Listen to a Prophet\'s Voice',b:'85'},{n:22,t:'We Listen to a Prophet\'s Voice',b:'85'},{n:23,t:'We Ever Pray for Thee',b:'85'},{n:24,t:'God Bless Our Prophet Dear',b:'85'},{n:25,t:'Now We\'ll Sing with One Accord',b:'85'},
+    {n:26,t:'Joseph Smith\'s First Prayer',b:'85'},{n:27,t:'Praise to the Man',b:'85'},{n:28,t:'Saints, Behold How Great Jehovah',b:'85'},{n:29,t:'A Poor Wayfaring Man of Grief',b:'85'},{n:30,t:'Come, Come, Ye Saints',b:'85'},
+    {n:31,t:'O God, Our Help in Ages Past',b:'85'},{n:32,t:'The Happy Day at Last Has Come',b:'85'},{n:33,t:'Our Mountain Home So Dear',b:'85'},{n:34,t:'O Ye Mountains High',b:'85'},{n:35,t:'For the Strength of the Hills',b:'85'},
+    {n:36,t:'They, the Builders of the Nation',b:'85'},{n:37,t:'The Wintry Day, Descending to Its Close',b:'85'},{n:38,t:'Come, All Ye Saints of Zion',b:'85'},{n:39,t:'O Saints of Zion',b:'85'},{n:40,t:'Arise, O Glorious Zion',b:'85'},
+    {n:41,t:'Let Zion in Her Beauty Rise',b:'85'},{n:42,t:'Hail to the Brightness of Zion\'s Glad Morning!',b:'85'},{n:43,t:'Zion Stands with Hills Surrounded',b:'85'},{n:44,t:'Beautiful Zion, Built Above',b:'85'},{n:45,t:'Lead Me into Life Eternal',b:'85'},
+    {n:46,t:'Glorious Things of Thee Are Spoken',b:'85'},{n:47,t:'We Will Sing of Zion',b:'85'},{n:48,t:'Glorious Things Are Sung of Zion',b:'85'},{n:49,t:'Adam-ondi-Ahman',b:'85'},{n:50,t:'Come, Thou Glorious Day of Promise',b:'85'},
+    {n:51,t:'Sons of Michael, He Approaches',b:'85'},{n:52,t:'The Day Dawn Is Breaking',b:'85'},{n:53,t:'Let Earth\'s Inhabitants Rejoice',b:'85'},{n:54,t:'Behold, the Mountain of the Lord',b:'85'},{n:55,t:'Lo, the Mighty God Appearing!',b:'85'},
+    {n:56,t:'Softly Beams the Sacred Dawning',b:'85'},{n:57,t:'We\'re Not Ashamed to Own Our Lord',b:'85'},{n:58,t:'Come, Ye Children of the Lord',b:'85'},{n:59,t:'Come, O Thou King of Kings',b:'85'},{n:60,t:'Battle Hymn of the Republic',b:'85'},
+    {n:61,t:'Raise Your Voices to the Lord',b:'85'},{n:62,t:'All Creatures of Our God and King',b:'85'},{n:63,t:'Great King of Heaven',b:'85'},{n:64,t:'On This Day of Joy and Gladness',b:'85'},{n:65,t:'Come, All Ye Saints Who Dwell on Earth',b:'85'},
+    {n:66,t:'Rejoice, the Lord Is King!',b:'85'},{n:67,t:'Glory to God on High',b:'85'},{n:68,t:'A Mighty Fortress Is Our God',b:'85'},{n:69,t:'All Glory, Laud, and Honor',b:'85'},{n:70,t:'Sing Praise to Him',b:'85'},
+    {n:71,t:'With Songs of Praise',b:'85'},{n:72,t:'Praise to the Lord, the Almighty',b:'85'},{n:73,t:'Praise the Lord with Heart and Voice',b:'85'},{n:74,t:'Praise Ye the Lord',b:'85'},{n:75,t:'In Hymns of Praise',b:'85'},
+    {n:76,t:'God of Our Fathers, We Come unto Thee',b:'85'},{n:77,t:'Great Is the Lord',b:'85'},{n:78,t:'God of Our Fathers, Whose Almighty Hand',b:'85'},{n:79,t:'With All the Power of Heart and Tongue',b:'85'},{n:80,t:'God of Our Fathers, Known of Old',b:'85'},
+    {n:81,t:'Press Forward, Saints',b:'85'},{n:82,t:'For All the Saints',b:'85'},{n:83,t:'Guide Us, O Thou Great Jehovah',b:'85'},{n:84,t:'Faith of Our Fathers',b:'85'},{n:85,t:'How Firm a Foundation',b:'85'},
+    {n:86,t:'How Great Thou Art',b:'85'},{n:87,t:'God Is Love',b:'85'},{n:88,t:'Great God, Attend While Zion Sings',b:'85'},{n:89,t:'The Lord Is My Light',b:'85'},{n:90,t:'From All That Dwell below the Skies',b:'85'},
+    {n:91,t:'Father, Thy Children to Thee Now Raise',b:'85'},{n:92,t:'For the Beauty of the Earth',b:'85'},{n:93,t:'Prayer of Thanksgiving',b:'85'},{n:94,t:'Come, Ye Thankful People',b:'85'},{n:95,t:'Now Thank We All Our God',b:'85'},
+    {n:96,t:'Dearest Children, God Is Near You',b:'85'},{n:97,t:'Lead, Kindly Light',b:'85'},{n:98,t:'I Need Thee Every Hour',b:'85'},{n:99,t:'Nearer, Dear Savior, to Thee',b:'85'},{n:100,t:'Nearer, My God, to Thee',b:'85'},
+    {n:101,t:'Guide Me to Thee',b:'85'},{n:102,t:'Jesus, Lover of My Soul',b:'85'},{n:103,t:'Precious Savior, Dear Redeemer',b:'85'},{n:104,t:'Jesus, Savior, Pilot Me',b:'85'},{n:105,t:'Master, the Tempest Is Raging',b:'85'},
+    {n:106,t:'God Speed the Right',b:'85'},{n:107,t:'Lord, Accept Our True Devotion',b:'85'},{n:108,t:'The Lord Is My Shepherd',b:'85'},{n:109,t:'The Lord My Pasture Will Prepare',b:'85'},{n:110,t:'Cast Thy Burden upon the Lord',b:'85'},
+    {n:111,t:'Rock of Ages',b:'85'},{n:112,t:'Savior, Redeemer of My Soul',b:'85'},{n:113,t:'Our Savior\'s Love',b:'85'},{n:114,t:'Come unto Him',b:'85'},{n:115,t:'Come, Ye Disconsolate',b:'85'},
+    {n:116,t:'Come, Follow Me',b:'85'},{n:117,t:'Come unto Jesus',b:'85'},{n:118,t:'Ye Simple Souls Who Stray',b:'85'},{n:119,t:'Come, We That Love the Lord',b:'85'},{n:120,t:'Lean on My Ample Arm',b:'85'},
+    {n:121,t:'I\'m a Pilgrim, I\'m a Stranger',b:'85'},{n:122,t:'Though Deepening Trials',b:'85'},{n:123,t:'Oh, May My Soul Commune with Thee',b:'85'},{n:124,t:'Be Still, My Soul',b:'85'},{n:125,t:'How Gentle God\'s Commands',b:'85'},
+    {n:126,t:'How Long, O Lord Most Holy and True',b:'85'},{n:127,t:'Does the Journey Seem Long?',b:'85'},{n:128,t:'When Faith Endures',b:'85'},{n:129,t:'Where Can I Turn for Peace?',b:'85'},{n:130,t:'Be Thou Humble',b:'85'},
+    {n:131,t:'More Holiness Give Me',b:'85'},{n:132,t:'God Is in His Holy Temple',b:'85'},{n:133,t:'Father in Heaven',b:'85'},{n:134,t:'I Believe in Christ',b:'85'},{n:135,t:'My Redeemer Lives',b:'85'},
+    {n:136,t:'I Know That My Redeemer Lives',b:'85'},{n:137,t:'Testimony',b:'85'},{n:138,t:'Bless Our Fast, We Pray',b:'85'},{n:139,t:'In Fasting We Approach Thee',b:'85'},{n:140,t:'Did You Think to Pray?',b:'85'},
+    {n:141,t:'Jesus, the Very Thought of Thee',b:'85'},{n:142,t:'Sweet Hour of Prayer',b:'85'},{n:143,t:'Let the Holy Spirit Guide',b:'85'},{n:144,t:'Secret Prayer',b:'85'},{n:145,t:'Prayer Is the Soul\'s Sincere Desire',b:'85'},
+    {n:146,t:'Gently Raise the Sacred Strain',b:'85'},{n:147,t:'Sweet Is the Work',b:'85'},{n:148,t:'Sabbath Day',b:'85'},{n:149,t:'As the Dew from Heaven Distilling',b:'85'},{n:150,t:'O Thou Kind and Gracious Father',b:'85'},
+    {n:151,t:'We Meet, Dear Lord',b:'85'},{n:152,t:'God Be with You Till We Meet Again',b:'85'},{n:153,t:'Lord, We Ask Thee Ere We Part',b:'85'},{n:154,t:'Father, This Hour Has Been One of Joy',b:'85'},{n:155,t:'We Have Partaken of Thy Love',b:'85'},
+    {n:156,t:'Sing We Now at Parting',b:'85'},{n:157,t:'Thy Spirit, Lord, Has Stirred Our Souls',b:'85'},{n:158,t:'Before Thee, Lord, I Bow My Head',b:'85'},{n:159,t:'Now the Day Is Over',b:'85'},{n:160,t:'Softly Now the Light of Day',b:'85'},
+    {n:161,t:'The Lord Be with Us',b:'85'},{n:162,t:'Lord, We Come before Thee Now',b:'85'},{n:163,t:'Lord, Dismiss Us with Thy Blessing',b:'85'},{n:164,t:'Great God, to Thee My Evening Song',b:'85'},{n:165,t:'Abide with Me; \'Tis Eventide',b:'85'},
+    {n:166,t:'Abide with Me!',b:'85'},{n:167,t:'Come, Let Us Sing an Evening Hymn',b:'85'},{n:168,t:'As the Shadows Fall',b:'85'},{n:169,t:'As Now We Take the Sacrament',b:'85'},{n:170,t:'God, Our Father, Hear Us Pray',b:'85'},
+    {n:171,t:'With Humble Heart',b:'85'},{n:172,t:'In Humility, Our Savior',b:'85'},{n:173,t:'While of These Emblems We Partake (AABERG)',b:'85'},{n:174,t:'While of These Emblems We Partake (SAINTSBURY)',b:'85'},{n:175,t:'O God, the Eternal Father',b:'85'},
+    {n:176,t:'\'Tis Sweet to Sing the Matchless Love (MEREDITH)',b:'85'},{n:177,t:'\'Tis Sweet to Sing the Matchless Love (HANCOCK)',b:'85'},{n:178,t:'O Lord of Hosts',b:'85'},{n:179,t:'Again, Our Dear Redeeming Lord',b:'85'},{n:180,t:'Father in Heaven, We Do Believe',b:'85'},
+    {n:181,t:'Jesus of Nazareth, Savior and King',b:'85'},{n:182,t:'We\'ll Sing All Hail to Jesus\' Name',b:'85'},{n:183,t:'In Remembrance of Thy Suffering',b:'85'},{n:184,t:'Upon the Cross of Calvary',b:'85'},{n:185,t:'Reverently and Meekly Now',b:'85'},
+    {n:186,t:'Again We Meet around the Board',b:'85'},{n:187,t:'God Loved Us, So He Sent His Son',b:'85'},{n:188,t:'Thy Will, O Lord, Be Done',b:'85'},{n:189,t:'O Thou, Before the World Began',b:'85'},{n:190,t:'In Memory of the Crucified',b:'85'},
+    {n:191,t:'Behold the Great Redeemer Die',b:'85'},{n:192,t:'He Died! The Great Redeemer Died',b:'85'},{n:193,t:'I Stand All Amazed',b:'85'},{n:194,t:'There Is a Green Hill Far Away',b:'85'},{n:195,t:'How Great the Wisdom and the Love',b:'85'},
+    {n:196,t:'Jesus, Once of Humble Birth',b:'85'},{n:197,t:'O Savior, Thou Who Wearest a Crown',b:'85'},{n:198,t:'That Easter Morn',b:'85'},{n:199,t:'He Is Risen!',b:'85'},{n:200,t:'Christ the Lord Is Risen Today',b:'85'},
+    {n:201,t:'Joy to the World',b:'85'},{n:202,t:'Oh, Come, All Ye Faithful',b:'85'},{n:203,t:'Angels We Have Heard on High',b:'85'},{n:204,t:'Silent Night',b:'85'},{n:205,t:'Once in Royal David\'s City',b:'85'},
+    {n:206,t:'Away in a Manger',b:'85'},{n:207,t:'It Came upon the Midnight Clear',b:'85'},{n:208,t:'O Little Town of Bethlehem',b:'85'},{n:209,t:'Hark! The Herald Angels Sing',b:'85'},{n:210,t:'With Wondering Awe',b:'85'},
+    {n:211,t:'While Shepherds Watched Their Flocks',b:'85'},{n:212,t:'Far, Far Away on Judea\'s Plains',b:'85'},{n:213,t:'The First Noel',b:'85'},{n:214,t:'I Heard the Bells on Christmas Day',b:'85'},{n:215,t:'Ring Out, Wild Bells',b:'85'},
+    {n:216,t:'We Are Sowing',b:'85'},{n:217,t:'Come, Let Us Anew',b:'85'},{n:218,t:'We Give Thee But Thine Own',b:'85'},{n:219,t:'Because I Have Been Given Much',b:'85'},{n:220,t:'Lord, I Would Follow Thee',b:'85'},
+    {n:221,t:'Dear to the Heart of the Shepherd',b:'85'},{n:222,t:'Hear Thou Our Hymn, O Lord',b:'85'},{n:223,t:'Have I Done Any Good?',b:'85'},{n:224,t:'I Have Work Enough to Do',b:'85'},{n:225,t:'We Are Marching On to Glory',b:'85'},
+    {n:226,t:'Improve the Shining Moments',b:'85'},{n:227,t:'There Is Sunshine in My Soul Today',b:'85'},{n:228,t:'You Can Make the Pathway Bright',b:'85'},{n:229,t:'Today, While the Sun Shines',b:'85'},{n:230,t:'Scatter Sunshine',b:'85'},
+    {n:231,t:'Father, Cheer Our Souls Tonight',b:'85'},{n:232,t:'Let Us Oft Speak Kind Words',b:'85'},{n:233,t:'Nay, Speak No Ill',b:'85'},{n:234,t:'Jesus, Mighty King in Zion',b:'85'},{n:235,t:'Should You Feel Inclined to Censure',b:'85'},
+    {n:236,t:'Lord, Accept into Thy Kingdom',b:'85'},{n:237,t:'Do What Is Right',b:'85'},{n:238,t:'Behold Thy Sons and Daughters, Lord',b:'85'},{n:239,t:'Choose the Right',b:'85'},{n:240,t:'Know This, That Every Soul Is Free',b:'85'},
+    {n:241,t:'Count Your Blessings',b:'85'},{n:242,t:'Praise God, from Whom All Blessings Flow',b:'85'},{n:243,t:'Let Us All Press On',b:'85'},{n:244,t:'Come Along, Come Along',b:'85'},{n:245,t:'This House We Dedicate to Thee',b:'85'},
+    {n:246,t:'Onward, Christian Soldiers',b:'85'},{n:247,t:'We Love Thy House, O God',b:'85'},{n:248,t:'Up, Awake, Ye Defenders of Zion',b:'85'},{n:249,t:'Called to Serve',b:'85'},{n:250,t:'We Are All Enlisted',b:'85'},
+    {n:251,t:'Behold! A Royal Army',b:'85'},{n:252,t:'Put Your Shoulder to the Wheel',b:'85'},{n:253,t:'Like Ten Thousand Legions Marching',b:'85'},{n:254,t:'True to the Faith',b:'85'},{n:255,t:'Carry On',b:'85'},
+    {n:256,t:'As Zion\'s Youth in Latter Days',b:'85'},{n:257,t:'Rejoice! A Glorious Sound Is Heard',b:'85'},{n:258,t:'O Thou Rock of Our Salvation',b:'85'},{n:259,t:'Hope of Israel',b:'85'},{n:260,t:'Who\'s on the Lord\'s Side?',b:'85'},
+    {n:261,t:'Thy Servants Are Prepared',b:'85'},{n:262,t:'Go, Ye Messengers of Glory',b:'85'},{n:263,t:'Go Forth with Faith',b:'85'},{n:264,t:'Hark, All Ye Nations!',b:'85'},{n:265,t:'Arise, O God, and Shine',b:'85'},
+    {n:266,t:'The Time Is Far Spent',b:'85'},{n:267,t:'How Wondrous and Great',b:'85'},{n:268,t:'Come, All Whose Souls Are Lighted',b:'85'},{n:269,t:'Jehovah, Lord of Heaven and Earth',b:'85'},{n:270,t:'I\'ll Go Where You Want Me to Go',b:'85'},
+    {n:271,t:'Oh, Holy Words of Truth and Love',b:'85'},{n:272,t:'Oh Say, What Is Truth?',b:'85'},{n:273,t:'Truth Reflects upon Our Senses',b:'85'},{n:274,t:'The Iron Rod',b:'85'},{n:275,t:'Men Are That They Might Have Joy',b:'85'},
+    {n:276,t:'Come Away to the Sunday School',b:'85'},{n:277,t:'As I Search the Holy Scriptures',b:'85'},{n:278,t:'Thanks for the Sabbath School',b:'85'},{n:279,t:'Thy Holy Word',b:'85'},{n:280,t:'Welcome, Welcome, Sabbath Morning',b:'85'},
+    {n:281,t:'Help Me Teach with Inspiration',b:'85'},{n:282,t:'We Meet Again as Sisters',b:'85'},{n:283,t:'The Glorious Gospel Light Has Shone',b:'85'},{n:284,t:'If You Could Hie to Kolob',b:'85'},{n:285,t:'God Moves in a Mysterious Way',b:'85'},
+    {n:286,t:'Oh, What Songs of the Heart',b:'85'},{n:287,t:'Rise, Ye Saints, and Temples Enter',b:'85'},{n:288,t:'How Beautiful Thy Temples, Lord',b:'85'},{n:289,t:'Holy Temples on Mount Zion',b:'85'},{n:290,t:'Rejoice, Ye Saints of Latter Days',b:'85'},
+    {n:291,t:'Turn Your Hearts',b:'85'},{n:292,t:'O My Father',b:'85'},{n:293,t:'Each Life That Touches Ours for Good',b:'85'},{n:294,t:'Love at Home',b:'85'},{n:295,t:'O Love That Glorifies the Son',b:'85'},
+    {n:296,t:'Our Father, by Whose Name',b:'85'},{n:297,t:'From Homes of Saints Glad Songs Arise',b:'85'},{n:298,t:'Home Can Be a Heaven on Earth',b:'85'},{n:299,t:'Children of Our Heavenly Father',b:'85'},{n:300,t:'Families Can Be Together Forever',b:'85'},
+    {n:301,t:'I Am a Child of God',b:'85'},{n:302,t:'I Know My Father Lives',b:'85'},{n:303,t:'Keep the Commandments',b:'85'},{n:304,t:'Teach Me to Walk in the Light',b:'85'},{n:305,t:'The Light Divine',b:'85'},
+    {n:306,t:'God\'s Daily Care',b:'85'},{n:307,t:'In Our Lovely Deseret',b:'85'},{n:308,t:'Love One Another',b:'85'},{n:309,t:'As Sisters in Zion',b:'85'},{n:310,t:'A Key Was Turned in Latter Days',b:'85'},
+    {n:311,t:'We Meet Again in Sabbath School',b:'85'},{n:312,t:'We Ever Pray for Thee (women)',b:'85'},{n:313,t:'God Is Love (women)',b:'85'},{n:314,t:'How Gentle God\'s Commands (men)',b:'85'},{n:315,t:'Jesus, the Very Thought of Thee (men)',b:'85'},
+    {n:316,t:'The Lord Is My Shepherd (men)',b:'85'},{n:317,t:'Sweet Is the Work (men)',b:'85'},{n:318,t:'Love at Home (men)',b:'85'},{n:319,t:'Ye Elders of Israel',b:'85'},{n:320,t:'The Priesthood of Our Lord',b:'85'},
+    {n:321,t:'Ye Who Are Called to Labor',b:'85'},{n:322,t:'Come, All Ye Sons of God',b:'85'},{n:323,t:'Rise Up, O Men of God (FESTAL SONG)',b:'85'},{n:324,t:'Rise Up, O Men of God (mixed)',b:'85'},{n:325,t:'See the Mighty Priesthood Gathered',b:'85'},
+    {n:326,t:'Come, Come, Ye Saints (men)',b:'85'},{n:327,t:'Go, Ye Messengers of Heaven',b:'85'},{n:328,t:'An Angel from on High (men)',b:'85'},{n:329,t:'Thy Servants Are Prepared (men)',b:'85'},{n:330,t:'See, the Mighty Angel Flying',b:'85'},
+    {n:331,t:'Oh Say, What Is Truth? (men)',b:'85'},{n:332,t:'Come, O Thou King of Kings (men)',b:'85'},{n:333,t:'High on the Mountain Top (men)',b:'85'},{n:334,t:'I Need Thee Every Hour (men)',b:'85'},{n:335,t:'Brightly Beams Our Father\'s Mercy',b:'85'},
+    {n:336,t:'School Thy Feelings',b:'85'},{n:337,t:'O Home Beloved',b:'85'},{n:338,t:'America the Beautiful',b:'85'},{n:339,t:'My Country, \'Tis of Thee',b:'85'},{n:340,t:'The Star-Spangled Banner',b:'85'},
+    {n:341,t:'God Save the King',b:'85'},
+    {n:1001,t:'Come, Thou Fount of Every Blessing',b:'HC'},{n:1002,t:'When the Savior Comes Again',b:'HC'},{n:1003,t:'It Is Well with My Soul',b:'HC'},{n:1004,t:'I Will Walk with Jesus',b:'HC'},{n:1005,t:'His Eye Is on the Sparrow',b:'HC'},
+    {n:1006,t:'Think a Sacred Song',b:'HC'},{n:1007,t:'As Bread Is Broken',b:'HC'},{n:1008,t:'Bread of Life, Living Water',b:'HC'},{n:1009,t:'Gethsemane',b:'HC'},{n:1010,t:'Amazing Grace',b:'HC'},
+    {n:1011,t:'Holding Hands Around the World',b:'HC'},{n:1012,t:'Anytime, Anywhere',b:'HC'},{n:1013,t:'God\'s Gracious Love',b:'HC'},{n:1014,t:'My Shepherd Will Supply My Need',b:'HC'},{n:1015,t:'Oh, the Deep, Deep Love of Jesus',b:'HC'},
+    {n:1016,t:'Behold the Wounds in Jesus\' Hands',b:'HC'},{n:1017,t:'This Is the Christ',b:'HC'},{n:1018,t:'Come, Lord Jesus, to the Manger',b:'HC'},{n:1019,t:'To Love like Thee',b:'HC'},{n:1020,t:'Softly and Tenderly Jesus Is Calling',b:'HC'},
+    {n:1021,t:'I Know That My Savior Loves Me',b:'HC'},{n:1022,t:'Faith in Every Footstep',b:'HC'},{n:1023,t:'Standing on the Promises',b:'HC'},{n:1024,t:'I Have Faith in the Lord Jesus Christ',b:'HC'},{n:1025,t:'Take My Heart and Let It Be Consecrated',b:'HC'},
+    {n:1026,t:'Holy Places',b:'HC'},{n:1027,t:'Welcome Home',b:'HC'},{n:1028,t:'This Little Light of Mine',b:'HC'},{n:1029,t:'I Can\'t Count Them All',b:'HC'},{n:1030,t:'Close as a Quiet Prayer',b:'HC'},
+    {n:1031,t:'Come, Hear the Word the Lord Has Spoken',b:'HC'},{n:1032,t:'Look unto Christ',b:'HC'},{n:1033,t:'Oh, How Great Is Our Joy',b:'HC'},{n:1034,t:'I\'m a Pioneer Too',b:'HC'},{n:1035,t:'As I Keep the Sabbath Day',b:'HC'},
+    {n:1036,t:'Read the Book of Mormon and Pray',b:'HC'},{n:1037,t:'I\'m Gonna Live So God Can Use Me',b:'HC'},{n:1038,t:'The Lord\'s My Shepherd',b:'HC'},{n:1039,t:'Because',b:'HC'},{n:1040,t:'His Voice as the Sound',b:'HC'},
+    {n:1041,t:'O Lord, Who Gave Thy Life for Me',b:'HC'},{n:1042,t:'Thou Gracious God, Whose Mercy Lends',b:'HC'},{n:1043,t:'Help Us Remember',b:'HC'},{n:1044,t:'How Did the Savior Minister?',b:'HC'},{n:1045,t:'Jesus Is the Way',b:'HC'},
+    {n:1046,t:'Can You Count the Stars in Heaven?',b:'HC'},{n:1047,t:'He Cares for Me',b:'HC'},{n:1048,t:'Our Prayer to Thee',b:'HC'},{n:1049,t:'Joseph Prayed in Faith',b:'HC'},{n:1050,t:'Stand by Me',b:'HC'},
+    {n:1051,t:'This Day Is a Good Day, Lord',b:'HC'},{n:1052,t:'Joyfully Bound',b:'HC'},{n:1053,t:'My Covenants',b:'HC'},{n:1054,t:'When I Am Baptized',b:'HC'},{n:1055,t:'The Power of the Holy Ghost',b:'HC'},
+    {n:1056,t:'Elijah and the Still, Small Voice',b:'HC'},{n:1057,t:'Jesus Is My Shepherd',b:'HC'},{n:1058,t:'My Song in the Night',b:'HC'},{n:1059,t:'This Is My Father\'s World',b:'HC'},{n:1060,t:'Build an Ark',b:'HC'},
+    {n:1061,t:'Love Will Bless Our Home',b:'HC'},{n:1062,t:'Lord, Accept Our Humble Fast',b:'HC'},{n:1201,t:'Hail the Day That Sees Him Rise',b:'HC'},{n:1202,t:'He Is Born, the Divine Christ Child',b:'HC'},{n:1203,t:'What Child Is This',b:'HC'},
+    {n:1204,t:'Star Bright',b:'HC'},{n:1205,t:'Let Easter Anthems Ring',b:'HC'},{n:1206,t:'Were You There?',b:'HC'},{n:1207,t:'Still, Still, Still',b:'HC'},{n:1208,t:'Go Tell It on the Mountain',b:'HC'},
+    {n:1209,t:'Little Baby in a Manger',b:'HC'},{n:1210,t:'Long Ago, Within a Garden',b:'HC'}
   ];
 
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // ---------- hymn picker ----------
   function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
   function formatHymn(h){ return h.n + ': ' + h.t; }
-  // parse a stored value like "66: Rejoice, the Lord Is King!" back to a number if possible
   function hymnNumFromValue(v){ var m = (v||'').match(/^\s*(\d+)\b/); return m ? parseInt(m[1],10) : null; }
 
-  var hpActive = null; // { get:fn, set:fn, refresh:fn }
+  var hpActive = null;
+  var hpBook = 'all';
 
   function openHymnPicker(opts){
     hpActive = opts;
-    var ov = document.getElementById('hpOverlay');
+    hpBook = 'all';
+    setActiveTab('all');
     var search = document.getElementById('hpSearch');
     document.getElementById('hpTitle').textContent = opts.title || 'Choose a hymn';
     search.value = '';
-    ov.classList.add('open');
+    document.getElementById('hpOverlay').classList.add('open');
     renderHymnList('');
-    // focus after paint so the keyboard opens
     setTimeout(function(){ search.focus(); }, 60);
   }
   function closeHymnPicker(){
     document.getElementById('hpOverlay').classList.remove('open');
     hpActive = null;
   }
+  function setActiveTab(book){
+    var tabs = document.querySelectorAll('#hpTabs .hp-tab');
+    for (var i=0;i<tabs.length;i++){
+      if (tabs[i].getAttribute('data-book') === book) tabs[i].classList.add('active');
+      else tabs[i].classList.remove('active');
+    }
+  }
   function renderHymnList(q){
     var list = document.getElementById('hpList');
     list.innerHTML = '';
+    var pool = HYMNS.filter(function(h){ return hpBook === 'all' || h.b === hpBook; });
     var raw = (q||'').trim();
     var results;
     if (raw === ''){
-      results = HYMNS;
+      results = pool;
     } else if (/^\d+$/.test(raw)) {
-      // pure number: exact first, then prefix matches
-      var exact = HYMNS.filter(function(h){ return h.n === parseInt(raw,10); });
-      var prefix = HYMNS.filter(function(h){ return h.n !== parseInt(raw,10) && String(h.n).indexOf(raw) === 0; });
+      var num = parseInt(raw,10);
+      var exact = pool.filter(function(h){ return h.n === num; });
+      var prefix = pool.filter(function(h){ return h.n !== num && String(h.n).indexOf(raw) === 0; });
       results = exact.concat(prefix);
     } else {
-      var nq = normalize(raw);
-      var terms = nq.split(' ').filter(Boolean);
-      results = HYMNS.filter(function(h){
+      var terms = normalize(raw).split(' ').filter(Boolean);
+      results = pool.filter(function(h){
         var nt = normalize(h.t);
         return terms.every(function(t){ return nt.indexOf(t) !== -1; });
       });
@@ -301,7 +349,7 @@
       list.appendChild(el('div','hp-empty','No hymn matches that.'));
       return;
     }
-    results.slice(0, 60).forEach(function(h){
+    results.slice(0, 80).forEach(function(h){
       var row = el('div','hp-row');
       row.appendChild(el('span','hp-num', String(h.n)));
       row.appendChild(el('span','hp-name', h.t));
@@ -314,18 +362,24 @@
   }
   document.getElementById('hpSearch').addEventListener('input', function(e){ renderHymnList(e.target.value); });
   document.getElementById('hpSearch').addEventListener('keydown', function(e){
-    if (e.key === 'Enter'){
-      var first = document.querySelector('#hpList .hp-row');
-      if (first) first.click();
-    }
+    if (e.key === 'Enter'){ var f = document.querySelector('#hpList .hp-row'); if (f) f.click(); }
   });
+  (function(){
+    var tabs = document.querySelectorAll('#hpTabs .hp-tab');
+    for (var i=0;i<tabs.length;i++){
+      tabs[i].addEventListener('click', function(){
+        hpBook = this.getAttribute('data-book');
+        setActiveTab(hpBook);
+        renderHymnList(document.getElementById('hpSearch').value);
+      });
+    }
+  })();
   document.getElementById('hpCancel').onclick = closeHymnPicker;
   document.getElementById('hpOverlay').addEventListener('click', function(e){
     if (e.target === this) closeHymnPicker();
   });
 
-
-  // ---- state ----
+  // ---------- state ----------
   var state = { weeks: [] };
   var view = { screen: "list", weekId: null };
 
@@ -333,18 +387,8 @@
     try { var raw = localStorage.getItem(KEY); if (raw) state = JSON.parse(raw); } catch (e) {}
     if (!state.weeks) state.weeks = [];
   }
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
-  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
 
-  function el(tag, cls, text) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text != null) e.textContent = text;
-    return e;
-  }
-
-  // ---- week model ----
   function blankWeek() {
     return {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
@@ -353,18 +397,15 @@
       openingHymn: "", sacramentHymn: "", restHymn: "", closingHymn: "",
       invocation: "", benediction: "",
       musical: "",
-      blessings: "",              // public IF present
+      blessings: "",
       speakers: [ { name: "", topic: "" }, { name: "", topic: "" } ],
       youthSpeaker: "", youthTopic: "",
-      testimony: false,           // if true, "Testimony meeting" replaces speakers on the program
-      // ward business (private)
-      releases: "",
-      callings: "",
-      announcements: ""
+      testimony: false,
+      releases: "", callings: "", announcements: "",
+      showSacramentBlock: true
     };
   }
   function cloneSkeleton(w) {
-    // clone the stable program shell, blank the volatile business + names
     var c = blankWeek();
     c.conducting = w.conducting;
     c.openingHymn = w.openingHymn; c.sacramentHymn = w.sacramentHymn;
@@ -378,22 +419,18 @@
     return d.toISOString().slice(0,10);
   }
   function fmtDate(iso) {
-    if (!iso) return "—";
+    if (!iso) return "-";
     var d = new Date(iso + "T12:00:00");
     return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
   }
   function fmtShort(iso) {
-    if (!iso) return "—";
+    if (!iso) return "-";
     var d = new Date(iso + "T12:00:00");
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
-  function isPast(iso) {
-    var d = new Date(iso + "T23:59:59");
-    return d.getTime() < Date.now();
-  }
+  function isPast(iso) { return new Date(iso + "T23:59:59").getTime() < Date.now(); }
   function findWeek(id) { return state.weeks.filter(function (w) { return w.id === id; })[0]; }
 
-  // ---- render router ----
   function render() {
     var app = document.getElementById("app");
     app.innerHTML = "";
@@ -408,15 +445,13 @@
     return top;
   }
 
-  // ---- list screen ----
   function renderList(app) {
     var head = el("div", "list-head");
     head.appendChild(el("span", "eyebrow", "Sacrament meetings"));
     var addBtn = el("button", "btn-ghost", "+ new week");
     addBtn.onclick = function () {
-      var w;
       var latest = state.weeks.slice().sort(function (a,b){ return b.date.localeCompare(a.date); })[0];
-      w = latest ? cloneSkeleton(latest) : blankWeek();
+      var w = latest ? cloneSkeleton(latest) : blankWeek();
       state.weeks.push(w); save();
       view = { screen: "editor", weekId: w.id }; render();
     };
@@ -424,11 +459,10 @@
     app.appendChild(head);
 
     if (!state.weeks.length) {
-      app.appendChild(el("div", "empty", "No meetings yet. Tap “+ new week” to plan one."));
+      app.appendChild(el("div", "empty", "No meetings yet. Tap \u201c+ new week\u201d to plan one."));
       return;
     }
     var weeks = state.weeks.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
-    // upcoming first (soonest at top), then past below
     var upcoming = weeks.filter(function (w) { return !isPast(w.date); });
     var past = weeks.filter(function (w) { return isPast(w.date); }).reverse();
     upcoming.concat(past).forEach(function (w) {
@@ -442,7 +476,7 @@
         var named = (w.speakers || []).filter(function (s) { return s.name; }).length + (w.youthSpeaker ? 1 : 0);
         if (named) bits.push(named + " speaker" + (named === 1 ? "" : "s"));
       }
-      when.appendChild(el("div", "week-meta", bits.join(" · ") || "not filled in yet"));
+      when.appendChild(el("div", "week-meta", bits.join(" \u00b7 ") || "not filled in yet"));
       card.appendChild(when);
       card.appendChild(el("span", "week-tag" + (isPast(w.date) ? " past" : ""), isPast(w.date) ? "past" : "upcoming"));
       card.onclick = function () { view = { screen: "editor", weekId: w.id }; render(); };
@@ -450,20 +484,19 @@
     });
   }
 
-  // ---- editor screen ----
+  // ---------- editor ----------
   function renderEditor(app) {
     var w = findWeek(view.weekId);
     if (!w) { view = { screen: "list" }; return render(); }
 
-    var back = el("button", "back-link", "‹ all meetings");
+    var back = el("button", "back-link", "\u2039 all meetings");
     back.onclick = function () { save(); view = { screen: "list" }; render(); };
     app.appendChild(back);
 
     function bindText(field, key, opts) {
       opts = opts || {};
       var f = el("div", "field");
-      var lab = el("label", null, opts.label || key);
-      f.appendChild(lab);
+      f.appendChild(el("label", null, opts.label || key));
       var input;
       if (opts.area) { input = el("textarea"); if (opts.rows) input.rows = opts.rows; }
       else { input = el("input"); input.type = "text"; }
@@ -480,23 +513,14 @@
       opts = opts || {};
       var f = el("div", "field");
       f.appendChild(el("label", null, opts.label || key));
-      var trigger = el("button", "hymn-trigger");
-      trigger.type = "button";
+      var trigger = el("button", "hymn-trigger"); trigger.type = "button";
       var valSpan = el("span", "ht-val");
       var clearBtn = el("span", "ht-clear");
-      var chev = el("span", "ht-chev", "▾");
-
+      var chev = el("span", "ht-chev", "\u25be");
       function paint() {
         var v = w[key] || "";
-        if (v) {
-          trigger.classList.remove("empty");
-          valSpan.textContent = v;
-          clearBtn.textContent = "×";
-        } else {
-          trigger.classList.add("empty");
-          valSpan.textContent = opts.placeholder || "tap to choose a hymn";
-          clearBtn.textContent = "";
-        }
+        if (v) { trigger.classList.remove("empty"); valSpan.textContent = v; clearBtn.textContent = "\u00d7"; }
+        else { trigger.classList.add("empty"); valSpan.textContent = opts.placeholder || "tap to choose a hymn"; clearBtn.textContent = ""; }
       }
       trigger.onclick = function () {
         openHymnPicker({
@@ -504,13 +528,8 @@
           set: function (val) { w[key] = val; save(); paint(); }
         });
       };
-      clearBtn.onclick = function (e) {
-        e.stopPropagation();
-        if (w[key]) { w[key] = ""; save(); paint(); }
-      };
-      trigger.appendChild(valSpan);
-      trigger.appendChild(clearBtn);
-      trigger.appendChild(chev);
+      clearBtn.onclick = function (e) { e.stopPropagation(); if (w[key]) { w[key] = ""; save(); paint(); } };
+      trigger.appendChild(valSpan); trigger.appendChild(clearBtn); trigger.appendChild(chev);
       f.appendChild(trigger);
       if (opts.hint) f.appendChild(el("div", "hint", opts.hint));
       paint();
@@ -518,24 +537,30 @@
       return f;
     }
 
-    // ===== date + conducting =====
+    function zoneHead(z, title, who, badgeText, badgeClass) {
+      var zh = el("div", "zone-head");
+      zh.appendChild(el("h2", null, title));
+      if (who) zh.appendChild(el("span", "who", who));
+      if (badgeText) zh.appendChild(el("span", "zone-badge " + badgeClass, badgeText));
+      z.appendChild(zh);
+    }
+
+    // ===== This meeting =====
     var z0 = el("div", "zone");
-    var zh0 = el("div", "zone-head"); zh0.appendChild(el("h2", null, "This meeting")); z0.appendChild(zh0);
+    zoneHead(z0, "This meeting");
     var df = el("div", "field");
     df.appendChild(el("label", null, "date"));
     var dinput = el("input"); dinput.type = "date"; dinput.value = w.date;
     dinput.onchange = function () { w.date = dinput.value; save(); };
     df.appendChild(dinput); z0.appendChild(df);
-    // conducting select
+
     var cf = el("div", "field");
     cf.appendChild(el("label", null, "conducting"));
     var sel = el("select");
-    sel.style.cssText = "width:100%;box-sizing:border-box;font-family:var(--sans);font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:#fff;color:var(--ink);";
-    var optBlank = el("option", null, "—"); optBlank.value = ""; sel.appendChild(optBlank);
+    var optBlank = el("option", null, "-"); optBlank.value = ""; sel.appendChild(optBlank);
     CONDUCTORS.forEach(function (name) {
       var o = el("option", null, name); o.value = name; if (w.conducting === name) o.selected = true; sel.appendChild(o);
     });
-    // allow a custom name already stored
     if (w.conducting && CONDUCTORS.indexOf(w.conducting) === -1) {
       var o = el("option", null, w.conducting); o.value = w.conducting; o.selected = true; sel.appendChild(o);
     }
@@ -543,31 +568,34 @@
     cf.appendChild(sel); z0.appendChild(cf);
     app.appendChild(z0);
 
-    // ===== PROGRAM (public) =====
-    var z1 = el("div", "zone");
-    var zh1 = el("div", "zone-head");
-    zh1.appendChild(el("h2", null, "Program"));
-    zh1.appendChild(el("span", "zone-badge badge-public", "goes to ward"));
-    z1.appendChild(zh1);
+    // ===== Hymns & Music =====
+    var zM = el("div", "zone");
+    zoneHead(zM, "Hymns & Music", "music coordinator");
+    bindHymn(zM, "openingHymn", { label: "opening hymn" });
+    bindHymn(zM, "sacramentHymn", { label: "sacrament hymn" });
+    bindHymn(zM, "restHymn", { label: "rest / intermediate hymn", hint: "leave blank if none" });
+    bindHymn(zM, "closingHymn", { label: "closing hymn" });
+    bindText(zM, "musical", { label: "musical number", hint: "leave blank if none" });
+    app.appendChild(zM);
 
-    bindHymn(z1, "openingHymn", { label: "opening hymn" });
-    bindText(z1, "invocation", { label: "invocation (opening prayer)" });
-    bindHymn(z1, "sacramentHymn", { label: "sacrament hymn" });
+    // ===== Prayers =====
+    var zP = el("div", "zone");
+    zoneHead(zP, "Prayers", "prayer coordinator");
+    bindText(zP, "invocation", { label: "invocation (opening prayer)" });
+    bindText(zP, "benediction", { label: "benediction (closing prayer)" });
+    app.appendChild(zP);
 
-    // testimony toggle
-    var tf = el("div", "field");
-    var tlab = el("label", null, "speakers");
-    tf.appendChild(tlab);
-    var tRow = el("div"); tRow.style.cssText = "display:flex;gap:8px;margin-bottom:8px;";
-    var tBtn = el("button", "btn-ghost", w.testimony ? "✓ testimony meeting" : "mark as testimony meeting");
+    // ===== Speakers =====
+    var zS = el("div", "zone");
+    zoneHead(zS, "Speakers", "speaker coordinator");
+    var tRow = el("div"); tRow.style.cssText = "display:flex;gap:8px;margin-bottom:12px;";
+    var tBtn = el("button", "btn-ghost", w.testimony ? "\u2713 testimony meeting" : "mark as testimony meeting");
     if (w.testimony) tBtn.style.cssText = "border-color:var(--accent);color:var(--accent);background:var(--accent-soft);";
     tBtn.onclick = function () { w.testimony = !w.testimony; save(); render(); };
     tRow.appendChild(tBtn);
-    tf.appendChild(tRow);
-    z1.appendChild(tf);
+    zS.appendChild(tRow);
 
     if (!w.testimony) {
-      // youth speaker
       var ys = el("div", "speaker-row");
       var ysf = el("div", "field sp-name");
       ysf.appendChild(el("label", null, "youth speaker"));
@@ -579,9 +607,8 @@
       var yti = el("input"); yti.type = "text"; yti.value = w.youthTopic || "";
       yti.oninput = function () { w.youthTopic = yti.value; save(); };
       ytf.appendChild(yti); ys.appendChild(ytf);
-      z1.appendChild(ys);
+      zS.appendChild(ys);
 
-      // adult speakers
       (w.speakers || []).forEach(function (sp, i) {
         var row = el("div", "speaker-row");
         var nf = el("div", "field sp-name");
@@ -599,38 +626,33 @@
           rm.onclick = function () { w.speakers.splice(i, 1); save(); render(); };
           row.appendChild(rm);
         }
-        z1.appendChild(row);
+        zS.appendChild(row);
       });
       var addSp = el("button", "add-line", "+ add speaker");
       addSp.onclick = function () { w.speakers.push({ name: "", topic: "" }); save(); render(); };
-      z1.appendChild(addSp);
+      zS.appendChild(addSp);
     }
+    app.appendChild(zS);
 
-    bindHymn(z1, "restHymn", { label: "rest / intermediate hymn", hint: "leave blank if none — it won't print" });
-    bindHymn(z1, "closingHymn", { label: "closing hymn" });
-    bindText(z1, "benediction", { label: "benediction (closing prayer)" });
-    bindText(z1, "musical", { label: "musical number", hint: "leave blank if none" });
-    bindText(z1, "blessings", { label: "blessings & confirmations", hint: "leave blank if none — appears on ward program only if filled" });
+    // ===== Ordinances (public if present) =====
+    var zO = el("div", "zone");
+    zoneHead(zO, "Ordinances", null, "goes to ward", "badge-public");
+    bindText(zO, "blessings", { label: "blessings & confirmations", hint: "leave blank if none - only prints if filled" });
+    app.appendChild(zO);
 
-    app.appendChild(z1);
-
-    // ===== WARD BUSINESS (private) =====
+    // ===== Ward business (private) =====
     var z2 = el("div", "zone");
-    var zh2 = el("div", "zone-head");
-    zh2.appendChild(el("h2", null, "Ward business"));
-    zh2.appendChild(el("span", "zone-badge badge-private", "private — conducting only"));
-    z2.appendChild(zh2);
-
-    bindText(z2, "releases", { label: "releases", area: true, rows: 2, hint: "one per line — names only; the vote-of-thanks script wraps them automatically" });
-    bindText(z2, "callings", { label: "callings / sustainings", area: true, rows: 2, hint: "one per line — name, then calling" });
-    bindText(z2, "announcements", { label: "announcements", area: true, rows: 2, hint: "last-minute is fine — edit right up to Sunday" });
+    zoneHead(z2, "Ward business", null, "private - conducting only", "badge-private");
+    bindText(z2, "releases", { label: "releases", area: true, rows: 2, hint: "one per line - names only" });
+    bindText(z2, "callings", { label: "callings / sustainings", area: true, rows: 2, hint: "one per line - name, then calling" });
+    bindText(z2, "announcements", { label: "announcements", area: true, rows: 2, hint: "last-minute is fine" });
     app.appendChild(z2);
 
     // ===== outputs =====
     var out = el("div", "out-bar");
-    var b1 = el("button", "btn", "Program →");
+    var b1 = el("button", "btn", "Program \u2192");
     b1.onclick = function () { openSheet(buildProgram(w)); };
-    var b2 = el("button", "btn secondary", "Conducting script →");
+    var b2 = el("button", "btn secondary", "Conducting sheet \u2192");
     b2.onclick = function () { openSheet(buildScript(w)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
@@ -648,10 +670,8 @@
     app.appendChild(del);
   }
 
-  // ---- output builders ----
-  function lines(str) {
-    return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean);
-  }
+  // ---------- output helpers ----------
+  function lines(str) { return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
   function docLine(label, val) {
     if (!val) return null;
     var row = el("div", "doc-line");
@@ -665,108 +685,123 @@
     doc.appendChild(el("h1", null, "Sacrament Meeting"));
     doc.appendChild(el("p", "doc-ward", WARD));
     doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
-
     var add = function (n) { if (n) doc.appendChild(n); };
     add(docLine("Conducting", w.conducting));
     add(docLine("Opening Hymn", w.openingHymn));
     add(docLine("Invocation", w.invocation));
     add(docLine("Blessings & Confirmations", w.blessings));
     add(docLine("Sacrament Hymn", w.sacramentHymn));
-
-    // speakers
     if (w.testimony) {
       add(docLine("Program", "Testimony Meeting"));
     } else {
       if (w.youthSpeaker) add(docLine("Youth Speaker", w.youthSpeaker));
-      (w.speakers || []).forEach(function (sp, i) {
-        if (sp.name) add(docLine("Speaker " + (i + 1), sp.name));
-      });
+      (w.speakers || []).forEach(function (sp, i) { if (sp.name) add(docLine("Speaker " + (i + 1), sp.name)); });
     }
     add(docLine("Rest Hymn", w.restHymn));
     add(docLine("Musical Number", w.musical));
     add(docLine("Closing Hymn", w.closingHymn));
     add(docLine("Benediction", w.benediction));
-
-    var wrap = el("div");
-    wrap.appendChild(doc);
-    return wrap;
+    var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
 
+  // ---------- one-page conducting chart ----------
+  function chartRow(item, who, detail) {
+    var tr = el("tr");
+    tr.appendChild(el("td", "c-item", item));
+    tr.appendChild(el("td", "c-who", who || ""));
+    tr.appendChild(el("td", "c-detail", detail || ""));
+    return tr;
+  }
   function buildScript(w) {
     var doc = document.createDocumentFragment();
-    doc.appendChild(el("h1", null, "Conducting Script"));
+    doc.appendChild(el("h1", null, "Conducting Sheet"));
     doc.appendChild(el("p", "doc-ward", WARD));
     doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
 
-    var add = function (n) { if (n) doc.appendChild(n); };
-    add(docLine("Conducting", w.conducting));
-    add(docLine("Opening Hymn", w.openingHymn));
-    add(docLine("Invocation", w.invocation));
+    // top: opening block
+    var t1 = el("table", "chart");
+    var tb1 = el("tbody");
+    var head = el("tr");
+    head.appendChild(el("th", "c-item", "Item"));
+    head.appendChild(el("th", "c-who", "Who / What"));
+    head.appendChild(el("th", "c-detail", "Notes"));
+    tb1.appendChild(head);
+    tb1.appendChild(chartRow("Conducting", w.conducting || "\u2014", ""));
+    tb1.appendChild(chartRow("Opening hymn", w.openingHymn || "\u2014", ""));
+    tb1.appendChild(chartRow("Invocation", w.invocation || "\u2014", ""));
+    t1.appendChild(tb1);
+    doc.appendChild(t1);
 
-    // ---- ward business with word-tracks ----
-    doc.appendChild(el("div", "doc-section-title", "Ward Business"));
-
-    if (w.announcements) {
-      var an = el("div", "doc-track");
-      an.appendChild(el("div", "cue", "Announcements:"));
-      lines(w.announcements).forEach(function (l) {
-        var p = el("div", "say"); p.textContent = "• " + l; an.appendChild(p);
-      });
-      doc.appendChild(an);
+    // ward business (compact verbiage)
+    var hasBiz = w.announcements || w.releases || w.callings;
+    if (hasBiz) {
+      doc.appendChild(el("div", "doc-section-title", "Ward Business"));
+      if (w.announcements) {
+        var an = el("div", "biz");
+        an.appendChild(el("span", "cue", "Announcements: "));
+        an.appendChild(document.createTextNode(lines(w.announcements).join("  \u00b7  ")));
+        doc.appendChild(an);
+      }
+      if (w.releases) {
+        var rel = el("div", "biz");
+        rel.appendChild(el("span", "cue", "Releases \u2014 thank & vote: "));
+        rel.appendChild(el("span", "names", lines(w.releases).join(", ")));
+        doc.appendChild(rel);
+      }
+      if (w.callings) {
+        var cal = el("div", "biz");
+        cal.appendChild(el("span", "cue", "Sustainings \u2014 stand, then vote: "));
+        cal.appendChild(el("span", "names", lines(w.callings).join("; ")));
+        doc.appendChild(cal);
+      }
+      if (w.blessings) {
+        var bl = el("div", "biz");
+        bl.appendChild(el("span", "cue", "Blessings / confirmations: "));
+        bl.appendChild(document.createTextNode(w.blessings));
+        doc.appendChild(bl);
+      }
     }
 
-    if (w.releases) {
-      var rel = el("div", "doc-track");
-      var r1 = el("div", "say"); r1.textContent = "“We have extended releases to the following:”"; rel.appendChild(r1);
-      lines(w.releases).forEach(function (l) {
-        var p = el("div", "names"); p.textContent = "   " + l; rel.appendChild(p);
-      });
-      var r2 = el("div", "say"); r2.textContent = "“All those who wish to extend a vote of thanks please manifest it by the uplifted hand. Thank you.”"; rel.appendChild(r2);
-      doc.appendChild(rel);
+    // sacrament handoff (toggleable)
+    if (w.showSacramentBlock !== false) {
+      var num = hymnNumFromValue(w.sacramentHymn);
+      var sac = el("div", "biz");
+      sac.appendChild(el("span", "cue", "Sacrament: "));
+      sac.appendChild(document.createTextNode(
+        "invite reverence; congregation sings hymn #" + (num || "___") +
+        ", then the Aaronic Priesthood administers the sacrament."));
+      doc.appendChild(sac);
     }
-
-    if (w.callings) {
-      var cal = el("div", "doc-track");
-      var c1 = el("div", "say"); c1.textContent = "“We have extended callings to the following, please stand as your name is read:”"; cal.appendChild(c1);
-      lines(w.callings).forEach(function (l) {
-        var p = el("div", "names"); p.textContent = "   " + l; cal.appendChild(p);
-      });
-      var c2 = el("div", "say"); c2.textContent = "“All those who can support these members in their callings, please manifest it by the uplifted hand. Any opposed by the same sign. Thank you.”"; cal.appendChild(c2);
-      doc.appendChild(cal);
-    }
-
-    if (w.blessings) add(docLine("Blessings & Confirmations", w.blessings));
-
-    // sacrament invitation closes the business section
-    var sac = el("div", "doc-track");
-    var sacNum = hymnNumFromValue(w.sacramentHymn);
-    var sacText = "“We invite your reverence as we begin the Sacrament Ordinance. The congregation will sing hymn #" +
-      (sacNum || "___") + ", after which the Aaronic Priesthood will bless & administer the sacrament.”";
-    var sp = el("div", "say"); sp.textContent = sacText; sac.appendChild(sp);
-    doc.appendChild(sac);
 
     doc.appendChild(el("hr", "rule"));
 
-    // ---- rest of the run of show ----
+    // run of show
+    var t2 = el("table", "chart");
+    var tb2 = el("tbody");
+    var h2 = el("tr");
+    h2.appendChild(el("th", "c-item", "Then"));
+    h2.appendChild(el("th", "c-who", "Who"));
+    h2.appendChild(el("th", "c-detail", "Topic / notes"));
+    tb2.appendChild(h2);
+    tb2.appendChild(chartRow("Sacrament hymn", w.sacramentHymn || "\u2014", ""));
     if (w.testimony) {
-      add(docLine("Program", "Testimony Meeting"));
+      tb2.appendChild(chartRow("Program", "Testimony meeting", "bear & invite testimonies"));
     } else {
-      if (w.youthSpeaker) add(docLine("Youth Speaker", w.youthSpeaker + (w.youthTopic ? "  —  " + w.youthTopic : "")));
+      if (w.youthSpeaker) tb2.appendChild(chartRow("Youth speaker", w.youthSpeaker, w.youthTopic || ""));
       (w.speakers || []).forEach(function (sp, i) {
-        if (sp.name) add(docLine("Speaker " + (i + 1), sp.name + (sp.topic ? "  —  " + sp.topic : "")));
+        if (sp.name) tb2.appendChild(chartRow("Speaker " + (i + 1), sp.name, sp.topic || ""));
       });
     }
-    add(docLine("Rest Hymn", w.restHymn));
-    add(docLine("Musical Number", w.musical));
-    add(docLine("Closing Hymn", w.closingHymn));
-    add(docLine("Benediction", w.benediction));
+    if (w.restHymn) tb2.appendChild(chartRow("Rest hymn", w.restHymn, ""));
+    if (w.musical) tb2.appendChild(chartRow("Musical number", w.musical, ""));
+    tb2.appendChild(chartRow("Closing hymn", w.closingHymn || "\u2014", ""));
+    tb2.appendChild(chartRow("Benediction", w.benediction || "\u2014", ""));
+    t2.appendChild(tb2);
+    doc.appendChild(t2);
 
-    var wrap = el("div");
-    wrap.appendChild(doc);
-    return wrap;
+    var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
 
-  // ---- output overlay ----
   function openSheet(node) {
     var host = document.getElementById("sheetDoc");
     host.innerHTML = "";
