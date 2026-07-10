@@ -306,21 +306,17 @@
 
     /* flattened print container (used for the pair view) */
     #printFlat { display: block; }
-    /* each flat page owns exactly one sheet; overflow is clipped so a few
-       stray pixels can't spill onto a trailing blank page */
-    .print-flat-page { break-inside: avoid; page-break-inside: avoid; overflow: hidden; }
-    /* break BEFORE each page after the first; never break AFTER anything,
-       so no engine can emit a trailing blank page */
+    .print-flat-page { break-inside: avoid; page-break-inside: avoid; }
+    /* force a break BEFORE every page except the first; never after */
     .print-flat-page + .print-flat-page { page-break-before: always; break-before: page; }
-    /* last page must not carry any after-break */
     .print-flat-page:last-child { page-break-after: avoid; break-after: avoid; }
-    /* padding lives on @page margin, not the doc, so the two don't stack and
-       push content past the printable height */
     .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
-    /* When flat mode is active, the live overlay must be FULLY hidden.
-       Needs !important to beat the .sheet-overlay display:block !important above. */
-    body.printing-flat .sheet-overlay { display: none !important; height: 0 !important; overflow: hidden !important; }
-    body.printing-flat #sheetDoc, body.printing-flat .sheet-scroll { display: none !important; }
+    /* a trailing bottom-margin on the last block can round up onto a new sheet */
+    .print-flat-page .doc > *:last-child { margin-bottom: 0 !important; }
+    /* When flat mode is active, hide the ENTIRE live tree; only #printFlat prints.
+       Anything left in normal flow (the empty overlay, an over-tall scroll box)
+       is what iOS was paginating into a trailing blank sheet. */
+    body.printing-flat > *:not(#printFlat) { display: none !important; }
     @page { margin: 0.6in 0.75in; }
   }
 </style>
