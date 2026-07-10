@@ -87,6 +87,15 @@
   .speaker-row .sp-name { margin-bottom: 8px; }
   .sp-topic label { color: var(--accent); }
 
+  /* toggle switch (Fast & Testimony) */
+  .toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; user-select: none; }
+  .toggle .tg-track { position: relative; width: 44px; height: 26px; border-radius: 999px; background: var(--rule); transition: background .18s; flex: 0 0 auto; }
+  .toggle .tg-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .18s; }
+  .toggle.on .tg-track { background: var(--accent); }
+  .toggle.on .tg-knob { transform: translateX(18px); }
+  .toggle .tg-label { font-size: 14.5px; font-weight: 600; color: var(--ink); }
+  .toggle.on .tg-label { color: var(--accent); }
+
   .add-line { background: transparent; border: 1px dashed var(--rule); color: var(--muted); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: var(--mono); width: 100%; margin-top: 2px; }
   .add-line:active { border-color: var(--accent); color: var(--accent); }
 
@@ -1011,12 +1020,13 @@
     // ===== Speakers =====
     var zS = el("div", "zone");
     zoneHead(zS, "Speakers", "speaker coordinator");
-    var tRow = el("div"); tRow.style.cssText = "display:flex;gap:8px;margin-bottom:12px;";
-    var tBtn = el("button", "btn-ghost", w.testimony ? "\u2713 testimony meeting" : "mark as testimony meeting");
-    if (w.testimony) tBtn.style.cssText = "border-color:var(--accent);color:var(--accent);background:var(--accent-soft);";
-    tBtn.onclick = function () { w.testimony = !w.testimony; save(); render(); };
-    tRow.appendChild(tBtn);
-    zS.appendChild(tRow);
+    var tg = el("div", "toggle" + (w.testimony ? " on" : ""));
+    var tgTrack = el("div", "tg-track");
+    tgTrack.appendChild(el("div", "tg-knob"));
+    tg.appendChild(tgTrack);
+    tg.appendChild(el("div", "tg-label", "Fast & Testimony"));
+    tg.onclick = function () { w.testimony = !w.testimony; save(); render(); };
+    zS.appendChild(tg);
 
     if (!w.testimony) {
       if (w.youthShown) {
