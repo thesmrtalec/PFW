@@ -114,6 +114,43 @@
   .doc-track .cue { color: var(--muted); font-style: italic; }
   .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
 
+  /* ---- hymn picker ---- */
+  .hymn-trigger {
+    width: 100%; box-sizing: border-box; text-align: left; font-family: var(--sans);
+    font-size: 16px; border: 1px solid var(--rule); border-radius: 8px;
+    padding: 10px 12px; background: #fff; color: var(--ink); cursor: pointer;
+    display: flex; align-items: center; gap: 8px; min-height: 42px;
+  }
+  .hymn-trigger:active { border-color: var(--accent); }
+  .hymn-trigger .ht-val { flex: 1; }
+  .hymn-trigger.empty .ht-val { color: var(--faint); font-style: italic; }
+  .hymn-trigger .ht-clear { color: var(--faint); font-size: 18px; line-height: 1; padding: 0 2px; }
+  .hymn-trigger .ht-chev { color: var(--faint); font-size: 13px; }
+
+  .hp-overlay { position: fixed; inset: 0; background: rgba(28,36,48,.4); z-index: 200; display: none; align-items: flex-end; }
+  .hp-overlay.open { display: flex; }
+  .hp-panel {
+    background: var(--paper); width: 100%; max-width: 620px; margin: 0 auto;
+    border-radius: 16px 16px 0 0; max-height: 88vh; display: flex; flex-direction: column;
+    box-shadow: 0 -4px 24px rgba(28,36,48,.18);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .hp-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--rule); }
+  .hp-head .hp-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--deep); margin-bottom: 10px; text-align: center; }
+  .hp-search {
+    width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
+    border: 1px solid var(--rule); border-radius: 9px; padding: 11px 13px; background: #fff; color: var(--ink);
+    -webkit-appearance: none; appearance: none;
+  }
+  .hp-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .hp-list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0 8px; }
+  .hp-row { display: flex; align-items: baseline; gap: 12px; padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #eef0f3; }
+  .hp-row:active { background: var(--accent-soft); }
+  .hp-row .hp-num { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); min-width: 34px; flex: 0 0 auto; }
+  .hp-row .hp-name { flex: 1; font-size: 15px; color: var(--ink); }
+  .hp-empty { text-align: center; color: var(--muted); font-family: var(--serif); font-style: italic; padding: 30px 16px; }
+  .hp-cancel { border-top: 1px solid var(--rule); text-align: center; padding: 13px; color: var(--accent); font-weight: 600; font-size: 15px; background: #fff; }
+
   @media print {
     body { background: #fff; }
     .sheet-toolbar, .wrap { display: none !important; }
@@ -135,6 +172,20 @@
   <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
 </div>
 
+<!-- hymn picker overlay -->
+<div class="hp-overlay" id="hpOverlay">
+  <div class="hp-panel">
+    <div class="hp-head">
+      <div class="hp-title" id="hpTitle">Choose a hymn</div>
+      <input class="hp-search" id="hpSearch" type="text" inputmode="text"
+        placeholder="type a number or a word — e.g. 66 or rejoice"
+        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+    </div>
+    <div class="hp-list" id="hpList"></div>
+    <div class="hp-cancel" id="hpCancel">Cancel</div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -142,6 +193,137 @@
   var WARD = "Pioneer Farms Ward";
 
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
+
+  // ---- hymn picker ----
+  var HYMNS = [
+    {n:1,t:'The Morning Breaks'},{n:2,t:'The Spirit of God'},{n:3,t:'Now Let Us Rejoice'},{n:4,t:'Truth Eternal'},{n:5,t:'High on the Mountain Top'},{n:6,t:'Redeemer of Israel'},
+    {n:7,t:'Israel, Israel, God Is Calling'},{n:8,t:'Awake and Arise'},{n:9,t:'Come, Rejoice'},{n:10,t:'Come, Sing to the Lord'},{n:11,t:'What Was Witnessed in the Heavens?'},{n:12,t:'\'Twas Witnessed in the Morning Sky'},
+    {n:13,t:'An Angel from on High'},{n:14,t:'Sweet Is the Peace the Gospel Brings'},{n:15,t:'I Saw a Mighty Angel Fly'},{n:16,t:'What Glorious Scenes Mine Eyes Behold'},{n:17,t:'Awake, Ye Saints of God, Awake!'},{n:18,t:'The Voice of God Again Is Heard'},
+    {n:19,t:'We Thank Thee, O God, for a Prophet'},{n:20,t:'God of Power, God of Right'},{n:21,t:'Come, Listen to a Prophet\'s Voice'},{n:22,t:'We Listen to a Prophet\'s Voice'},{n:23,t:'We Ever Pray for Thee'},{n:24,t:'God Bless Our Prophet Dear'},
+    {n:25,t:'Now We\'ll Sing with One Accord'},{n:26,t:'Joseph Smith\'s First Prayer'},{n:27,t:'Praise to the Man'},{n:28,t:'Saints, Behold How Great Jehovah'},{n:29,t:'A Poor Wayfaring Man of Grief'},{n:30,t:'Come, Come, Ye Saints'},
+    {n:31,t:'O God, Our Help in Ages Past'},{n:32,t:'The Happy Day at Last Has Come'},{n:33,t:'Our Mountain Home So Dear'},{n:34,t:'O Ye Mountains High'},{n:35,t:'For the Strength of the Hills'},{n:36,t:'They, the Builders of the Nation'},
+    {n:37,t:'The Wintry Day, Descending to Its Close'},{n:38,t:'Come, All Ye Saints of Zion'},{n:39,t:'O Saints of Zion'},{n:40,t:'Arise, O Glorious Zion'},{n:41,t:'Let Zion in Her Beauty Rise'},{n:42,t:'Hail to the Brightness of Zion\'s Glad Morning!'},
+    {n:43,t:'Zion Stands with Hills Surrounded'},{n:44,t:'Beautiful Zion, Built Above'},{n:45,t:'Lead Me into Life Eternal'},{n:46,t:'Glorious Things of Thee Are Spoken'},{n:47,t:'We Will Sing of Zion'},{n:48,t:'Glorious Things Are Sung of Zion'},
+    {n:49,t:'Adam-ondi-Ahman'},{n:50,t:'Come, Thou Glorious Day of Promise'},{n:51,t:'Sons of Michael, He Approaches'},{n:52,t:'The Day Dawn Is Breaking'},{n:53,t:'Let Earth\'s Inhabitants Rejoice'},{n:54,t:'Behold, the Mountain of the Lord'},
+    {n:55,t:'Lo, the Mighty God Appearing!'},{n:56,t:'Softly Beams the Sacred Dawning'},{n:57,t:'We\'re Not Ashamed to Own Our Lord'},{n:58,t:'Come, Ye Children of the Lord'},{n:59,t:'Come, O Thou King of Kings'},{n:60,t:'Battle Hymn of the Republic'},
+    {n:61,t:'Raise Your Voices to the Lord'},{n:62,t:'All Creatures of Our God and King'},{n:63,t:'Great King of Heaven'},{n:64,t:'On This Day of Joy and Gladness'},{n:65,t:'Come, All Ye Saints Who Dwell on Earth'},{n:66,t:'Rejoice, the Lord Is King!'},
+    {n:67,t:'Glory to God on High'},{n:68,t:'A Mighty Fortress Is Our God'},{n:69,t:'All Glory, Laud, and Honor'},{n:70,t:'Sing Praise to Him'},{n:71,t:'With Songs of Praise'},{n:72,t:'Praise to the Lord, the Almighty'},
+    {n:73,t:'Praise the Lord with Heart and Voice'},{n:74,t:'Praise Ye the Lord'},{n:75,t:'In Hymns of Praise'},{n:76,t:'God of Our Fathers, We Come unto Thee'},{n:77,t:'Great Is the Lord'},{n:78,t:'God of Our Fathers, Whose Almighty Hand'},
+    {n:79,t:'With All the Power of Heart and Tongue'},{n:80,t:'God of Our Fathers, Known of Old'},{n:81,t:'Press Forward, Saints'},{n:82,t:'For All the Saints'},{n:83,t:'Guide Us, O Thou Great Jehovah'},{n:84,t:'Faith of Our Fathers'},
+    {n:85,t:'How Firm a Foundation'},{n:86,t:'How Great Thou Art'},{n:87,t:'God Is Love'},{n:88,t:'Great God, Attend While Zion Sings'},{n:89,t:'The Lord Is My Light'},{n:90,t:'From All That Dwell below the Skies'},
+    {n:91,t:'Father, Thy Children to Thee Now Raise'},{n:92,t:'For the Beauty of the Earth'},{n:93,t:'Prayer of Thanksgiving'},{n:94,t:'Come, Ye Thankful People'},{n:95,t:'Now Thank We All Our God'},{n:96,t:'Dearest Children, God Is Near You'},
+    {n:97,t:'Lead, Kindly Light'},{n:98,t:'I Need Thee Every Hour'},{n:99,t:'Nearer, Dear Savior, to Thee'},{n:100,t:'Nearer, My God, to Thee'},{n:101,t:'Guide Me to Thee'},{n:102,t:'Jesus, Lover of My Soul'},
+    {n:103,t:'Precious Savior, Dear Redeemer'},{n:104,t:'Jesus, Savior, Pilot Me'},{n:105,t:'Master, the Tempest Is Raging'},{n:106,t:'God Speed the Right'},{n:107,t:'Lord, Accept Our True Devotion'},{n:108,t:'The Lord Is My Shepherd'},
+    {n:109,t:'The Lord My Pasture Will Prepare'},{n:110,t:'Cast Thy Burden upon the Lord'},{n:111,t:'Rock of Ages'},{n:112,t:'Savior, Redeemer of My Soul'},{n:113,t:'Our Savior\'s Love'},{n:114,t:'Come unto Him'},
+    {n:115,t:'Come, Ye Disconsolate'},{n:116,t:'Come, Follow Me'},{n:117,t:'Come unto Jesus'},{n:118,t:'Ye Simple Souls Who Stray'},{n:119,t:'Come, We That Love the Lord'},{n:120,t:'Lean on My Ample Arm'},
+    {n:121,t:'I\'m a Pilgrim, I\'m a Stranger'},{n:122,t:'Though Deepening Trials'},{n:123,t:'Oh, May My Soul Commune with Thee'},{n:124,t:'Be Still, My Soul'},{n:125,t:'How Gentle God\'s Commands'},{n:126,t:'How Long, O Lord Most Holy and True'},
+    {n:127,t:'Does the Journey Seem Long?'},{n:128,t:'When Faith Endures'},{n:129,t:'Where Can I Turn for Peace?'},{n:130,t:'Be Thou Humble'},{n:131,t:'More Holiness Give Me'},{n:132,t:'God Is in His Holy Temple'},
+    {n:133,t:'Father in Heaven'},{n:134,t:'I Believe in Christ'},{n:135,t:'My Redeemer Lives'},{n:136,t:'I Know That My Redeemer Lives'},{n:137,t:'Testimony'},{n:138,t:'Bless Our Fast, We Pray'},
+    {n:139,t:'In Fasting We Approach Thee'},{n:140,t:'Did You Think to Pray?'},{n:141,t:'Jesus, the Very Thought of Thee'},{n:142,t:'Sweet Hour of Prayer'},{n:143,t:'Let the Holy Spirit Guide'},{n:144,t:'Secret Prayer'},
+    {n:145,t:'Prayer Is the Soul\'s Sincere Desire'},{n:146,t:'Gently Raise the Sacred Strain'},{n:147,t:'Sweet Is the Work'},{n:148,t:'Sabbath Day'},{n:149,t:'As the Dew from Heaven Distilling'},{n:150,t:'O Thou Kind and Gracious Father'},
+    {n:151,t:'We Meet, Dear Lord'},{n:152,t:'God Be with You Till We Meet Again'},{n:153,t:'Lord, We Ask Thee Ere We Part'},{n:154,t:'Father, This Hour Has Been One of Joy'},{n:155,t:'We Have Partaken of Thy Love'},{n:156,t:'Sing We Now at Parting'},
+    {n:157,t:'Thy Spirit, Lord, Has Stirred Our Souls'},{n:158,t:'Before Thee, Lord, I Bow My Head'},{n:159,t:'Now the Day Is Over'},{n:160,t:'Softly Now the Light of Day'},{n:161,t:'The Lord Be with Us'},{n:162,t:'Lord, We Come before Thee Now'},
+    {n:163,t:'Lord, Dismiss Us with Thy Blessing'},{n:164,t:'Great God, to Thee My Evening Song'},{n:165,t:'Abide with Me; \'Tis Eventide'},{n:166,t:'Abide with Me!'},{n:167,t:'Come, Let Us Sing an Evening Hymn'},{n:168,t:'As the Shadows Fall'},
+    {n:169,t:'As Now We Take the Sacrament'},{n:170,t:'God, Our Father, Hear Us Pray'},{n:171,t:'With Humble Heart'},{n:172,t:'In Humility, Our Savior'},{n:173,t:'While of These Emblems We Partake (AABERG)'},{n:174,t:'While of These Emblems We Partake (SAINTSBURY)'},
+    {n:175,t:'O God, the Eternal Father'},{n:176,t:'\'Tis Sweet to Sing the Matchless Love (MEREDITH)'},{n:177,t:'\'Tis Sweet to Sing the Matchless Love (HANCOCK)'},{n:178,t:'O Lord of Hosts'},{n:179,t:'Again, Our Dear Redeeming Lord'},{n:180,t:'Father in Heaven, We Do Believe'},
+    {n:181,t:'Jesus of Nazareth, Savior and King'},{n:182,t:'We\'ll Sing All Hail to Jesus\' Name'},{n:183,t:'In Remembrance of Thy Suffering'},{n:184,t:'Upon the Cross of Calvary'},{n:185,t:'Reverently and Meekly Now'},{n:186,t:'Again We Meet around the Board'},
+    {n:187,t:'God Loved Us, So He Sent His Son'},{n:188,t:'Thy Will, O Lord, Be Done'},{n:189,t:'O Thou, Before the World Began'},{n:190,t:'In Memory of the Crucified'},{n:191,t:'Behold the Great Redeemer Die'},{n:192,t:'He Died! The Great Redeemer Died'},
+    {n:193,t:'I Stand All Amazed'},{n:194,t:'There Is a Green Hill Far Away'},{n:195,t:'How Great the Wisdom and the Love'},{n:196,t:'Jesus, Once of Humble Birth'},{n:197,t:'O Savior, Thou Who Wearest a Crown'},{n:198,t:'That Easter Morn'},
+    {n:199,t:'He Is Risen!'},{n:200,t:'Christ the Lord Is Risen Today'},{n:201,t:'Joy to the World'},{n:202,t:'Oh, Come, All Ye Faithful'},{n:203,t:'Angels We Have Heard on High'},{n:204,t:'Silent Night'},
+    {n:205,t:'Once in Royal David\'s City'},{n:206,t:'Away in a Manger'},{n:207,t:'It Came upon the Midnight Clear'},{n:208,t:'O Little Town of Bethlehem'},{n:209,t:'Hark! The Herald Angels Sing'},{n:210,t:'With Wondering Awe'},
+    {n:211,t:'While Shepherds Watched Their Flocks'},{n:212,t:'Far, Far Away on Judea\'s Plains'},{n:213,t:'The First Noel'},{n:214,t:'I Heard the Bells on Christmas Day'},{n:215,t:'Ring Out, Wild Bells'},{n:216,t:'We Are Sowing'},
+    {n:217,t:'Come, Let Us Anew'},{n:218,t:'We Give Thee But Thine Own'},{n:219,t:'Because I Have Been Given Much'},{n:220,t:'Lord, I Would Follow Thee'},{n:221,t:'Dear to the Heart of the Shepherd'},{n:222,t:'Hear Thou Our Hymn, O Lord'},
+    {n:223,t:'Have I Done Any Good?'},{n:224,t:'I Have Work Enough to Do'},{n:225,t:'We Are Marching On to Glory'},{n:226,t:'Improve the Shining Moments'},{n:227,t:'There Is Sunshine in My Soul Today'},{n:228,t:'You Can Make the Pathway Bright'},
+    {n:229,t:'Today, While the Sun Shines'},{n:230,t:'Scatter Sunshine'},{n:231,t:'Father, Cheer Our Souls Tonight'},{n:232,t:'Let Us Oft Speak Kind Words'},{n:233,t:'Nay, Speak No Ill'},{n:234,t:'Jesus, Mighty King in Zion'},
+    {n:235,t:'Should You Feel Inclined to Censure'},{n:236,t:'Lord, Accept into Thy Kingdom'},{n:237,t:'Do What Is Right'},{n:238,t:'Behold Thy Sons and Daughters, Lord'},{n:239,t:'Choose the Right'},{n:240,t:'Know This, That Every Soul Is Free'},
+    {n:241,t:'Count Your Blessings'},{n:242,t:'Praise God, from Whom All Blessings Flow'},{n:243,t:'Let Us All Press On'},{n:244,t:'Come Along, Come Along'},{n:245,t:'This House We Dedicate to Thee'},{n:246,t:'Onward, Christian Soldiers'},
+    {n:247,t:'We Love Thy House, O God'},{n:248,t:'Up, Awake, Ye Defenders of Zion'},{n:249,t:'Called to Serve'},{n:250,t:'We Are All Enlisted'},{n:251,t:'Behold! A Royal Army'},{n:252,t:'Put Your Shoulder to the Wheel'},
+    {n:253,t:'Like Ten Thousand Legions Marching'},{n:254,t:'True to the Faith'},{n:255,t:'Carry On'},{n:256,t:'As Zion\'s Youth in Latter Days'},{n:257,t:'Rejoice! A Glorious Sound Is Heard'},{n:258,t:'O Thou Rock of Our Salvation'},
+    {n:259,t:'Hope of Israel'},{n:260,t:'Who\'s on the Lord\'s Side?'},{n:261,t:'Thy Servants Are Prepared'},{n:262,t:'Go, Ye Messengers of Glory'},{n:263,t:'Go Forth with Faith'},{n:264,t:'Hark, All Ye Nations!'},
+    {n:265,t:'Arise, O God, and Shine'},{n:266,t:'The Time Is Far Spent'},{n:267,t:'How Wondrous and Great'},{n:268,t:'Come, All Whose Souls Are Lighted'},{n:269,t:'Jehovah, Lord of Heaven and Earth'},{n:270,t:'I\'ll Go Where You Want Me to Go'},
+    {n:271,t:'Oh, Holy Words of Truth and Love'},{n:272,t:'Oh Say, What Is Truth?'},{n:273,t:'Truth Reflects upon Our Senses'},{n:274,t:'The Iron Rod'},{n:275,t:'Men Are That They Might Have Joy'},{n:276,t:'Come Away to the Sunday School'},
+    {n:277,t:'As I Search the Holy Scriptures'},{n:278,t:'Thanks for the Sabbath School'},{n:279,t:'Thy Holy Word'},{n:280,t:'Welcome, Welcome, Sabbath Morning'},{n:281,t:'Help Me Teach with Inspiration'},{n:282,t:'We Meet Again as Sisters'},
+    {n:283,t:'The Glorious Gospel Light Has Shone'},{n:284,t:'If You Could Hie to Kolob'},{n:285,t:'God Moves in a Mysterious Way'},{n:286,t:'Oh, What Songs of the Heart'},{n:287,t:'Rise, Ye Saints, and Temples Enter'},{n:288,t:'How Beautiful Thy Temples, Lord'},
+    {n:289,t:'Holy Temples on Mount Zion'},{n:290,t:'Rejoice, Ye Saints of Latter Days'},{n:291,t:'Turn Your Hearts'},{n:292,t:'O My Father'},{n:293,t:'Each Life That Touches Ours for Good'},{n:294,t:'Love at Home'},
+    {n:295,t:'O Love That Glorifies the Son'},{n:296,t:'Our Father, by Whose Name'},{n:297,t:'From Homes of Saints Glad Songs Arise'},{n:298,t:'Home Can Be a Heaven on Earth'},{n:299,t:'Children of Our Heavenly Father'},{n:300,t:'Families Can Be Together Forever'},
+    {n:301,t:'I Am a Child of God'},{n:302,t:'I Know My Father Lives'},{n:303,t:'Keep the Commandments'},{n:304,t:'Teach Me to Walk in the Light'},{n:305,t:'The Light Divine'},{n:306,t:'God\'s Daily Care'},
+    {n:307,t:'In Our Lovely Deseret'},{n:308,t:'Love One Another'},{n:309,t:'As Sisters in Zion'},{n:310,t:'A Key Was Turned in Latter Days'},{n:311,t:'We Meet Again in Sabbath School'},{n:312,t:'We Ever Pray for Thee (women)'},
+    {n:313,t:'God Is Love (women)'},{n:314,t:'How Gentle God\'s Commands (men)'},{n:315,t:'Jesus, the Very Thought of Thee (men)'},{n:316,t:'The Lord Is My Shepherd (men)'},{n:317,t:'Sweet Is the Work (men)'},{n:318,t:'Love at Home (men)'},
+    {n:319,t:'Ye Elders of Israel'},{n:320,t:'The Priesthood of Our Lord'},{n:321,t:'Ye Who Are Called to Labor'},{n:322,t:'Come, All Ye Sons of God'},{n:323,t:'Rise Up, O Men of God (FESTAL SONG)'},{n:324,t:'Rise Up, O Men of God (mixed)'},
+    {n:325,t:'See the Mighty Priesthood Gathered'},{n:326,t:'Come, Come, Ye Saints (men)'},{n:327,t:'Go, Ye Messengers of Heaven'},{n:328,t:'An Angel from on High (men)'},{n:329,t:'Thy Servants Are Prepared (men)'},{n:330,t:'See, the Mighty Angel Flying'},
+    {n:331,t:'Oh Say, What Is Truth? (men)'},{n:332,t:'Come, O Thou King of Kings (men)'},{n:333,t:'High on the Mountain Top (men)'},{n:334,t:'I Need Thee Every Hour (men)'},{n:335,t:'Brightly Beams Our Father\'s Mercy'},{n:336,t:'School Thy Feelings'},
+    {n:337,t:'O Home Beloved'},{n:338,t:'America the Beautiful'},{n:339,t:'My Country, \'Tis of Thee'},{n:340,t:'The Star-Spangled Banner'},{n:341,t:'God Save the King'}
+  ];
+
+  function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+  function formatHymn(h){ return h.n + ': ' + h.t; }
+  // parse a stored value like "66: Rejoice, the Lord Is King!" back to a number if possible
+  function hymnNumFromValue(v){ var m = (v||'').match(/^\s*(\d+)\b/); return m ? parseInt(m[1],10) : null; }
+
+  var hpActive = null; // { get:fn, set:fn, refresh:fn }
+
+  function openHymnPicker(opts){
+    hpActive = opts;
+    var ov = document.getElementById('hpOverlay');
+    var search = document.getElementById('hpSearch');
+    document.getElementById('hpTitle').textContent = opts.title || 'Choose a hymn';
+    search.value = '';
+    ov.classList.add('open');
+    renderHymnList('');
+    // focus after paint so the keyboard opens
+    setTimeout(function(){ search.focus(); }, 60);
+  }
+  function closeHymnPicker(){
+    document.getElementById('hpOverlay').classList.remove('open');
+    hpActive = null;
+  }
+  function renderHymnList(q){
+    var list = document.getElementById('hpList');
+    list.innerHTML = '';
+    var raw = (q||'').trim();
+    var results;
+    if (raw === ''){
+      results = HYMNS;
+    } else if (/^\d+$/.test(raw)) {
+      // pure number: exact first, then prefix matches
+      var exact = HYMNS.filter(function(h){ return h.n === parseInt(raw,10); });
+      var prefix = HYMNS.filter(function(h){ return h.n !== parseInt(raw,10) && String(h.n).indexOf(raw) === 0; });
+      results = exact.concat(prefix);
+    } else {
+      var nq = normalize(raw);
+      var terms = nq.split(' ').filter(Boolean);
+      results = HYMNS.filter(function(h){
+        var nt = normalize(h.t);
+        return terms.every(function(t){ return nt.indexOf(t) !== -1; });
+      });
+    }
+    if (!results.length){
+      list.appendChild(el('div','hp-empty','No hymn matches that.'));
+      return;
+    }
+    results.slice(0, 60).forEach(function(h){
+      var row = el('div','hp-row');
+      row.appendChild(el('span','hp-num', String(h.n)));
+      row.appendChild(el('span','hp-name', h.t));
+      row.onclick = function(){
+        if (hpActive && hpActive.set) hpActive.set(formatHymn(h));
+        closeHymnPicker();
+      };
+      list.appendChild(row);
+    });
+  }
+  document.getElementById('hpSearch').addEventListener('input', function(e){ renderHymnList(e.target.value); });
+  document.getElementById('hpSearch').addEventListener('keydown', function(e){
+    if (e.key === 'Enter'){
+      var first = document.querySelector('#hpList .hp-row');
+      if (first) first.click();
+    }
+  });
+  document.getElementById('hpCancel').onclick = closeHymnPicker;
+  document.getElementById('hpOverlay').addEventListener('click', function(e){
+    if (e.target === this) closeHymnPicker();
+  });
+
 
   // ---- state ----
   var state = { weeks: [] };
@@ -294,6 +476,48 @@
       return f;
     }
 
+    function bindHymn(field, key, opts) {
+      opts = opts || {};
+      var f = el("div", "field");
+      f.appendChild(el("label", null, opts.label || key));
+      var trigger = el("button", "hymn-trigger");
+      trigger.type = "button";
+      var valSpan = el("span", "ht-val");
+      var clearBtn = el("span", "ht-clear");
+      var chev = el("span", "ht-chev", "▾");
+
+      function paint() {
+        var v = w[key] || "";
+        if (v) {
+          trigger.classList.remove("empty");
+          valSpan.textContent = v;
+          clearBtn.textContent = "×";
+        } else {
+          trigger.classList.add("empty");
+          valSpan.textContent = opts.placeholder || "tap to choose a hymn";
+          clearBtn.textContent = "";
+        }
+      }
+      trigger.onclick = function () {
+        openHymnPicker({
+          title: opts.label ? ("Choose " + opts.label) : "Choose a hymn",
+          set: function (val) { w[key] = val; save(); paint(); }
+        });
+      };
+      clearBtn.onclick = function (e) {
+        e.stopPropagation();
+        if (w[key]) { w[key] = ""; save(); paint(); }
+      };
+      trigger.appendChild(valSpan);
+      trigger.appendChild(clearBtn);
+      trigger.appendChild(chev);
+      f.appendChild(trigger);
+      if (opts.hint) f.appendChild(el("div", "hint", opts.hint));
+      paint();
+      field.appendChild(f);
+      return f;
+    }
+
     // ===== date + conducting =====
     var z0 = el("div", "zone");
     var zh0 = el("div", "zone-head"); zh0.appendChild(el("h2", null, "This meeting")); z0.appendChild(zh0);
@@ -326,9 +550,9 @@
     zh1.appendChild(el("span", "zone-badge badge-public", "goes to ward"));
     z1.appendChild(zh1);
 
-    bindText(z1, "openingHymn", { label: "opening hymn", placeholder: "141: Jesus, the Very Thought of Thee" });
+    bindHymn(z1, "openingHymn", { label: "opening hymn" });
     bindText(z1, "invocation", { label: "invocation (opening prayer)" });
-    bindText(z1, "sacramentHymn", { label: "sacrament hymn", placeholder: "177: 'Tis Sweet to Sing the Matchless Love" });
+    bindHymn(z1, "sacramentHymn", { label: "sacrament hymn" });
 
     // testimony toggle
     var tf = el("div", "field");
@@ -382,8 +606,8 @@
       z1.appendChild(addSp);
     }
 
-    bindText(z1, "restHymn", { label: "rest / intermediate hymn", hint: "leave blank if none — it won't print" });
-    bindText(z1, "closingHymn", { label: "closing hymn", placeholder: "124: Be Still, My Soul" });
+    bindHymn(z1, "restHymn", { label: "rest / intermediate hymn", hint: "leave blank if none — it won't print" });
+    bindHymn(z1, "closingHymn", { label: "closing hymn" });
     bindText(z1, "benediction", { label: "benediction (closing prayer)" });
     bindText(z1, "musical", { label: "musical number", hint: "leave blank if none" });
     bindText(z1, "blessings", { label: "blessings & confirmations", hint: "leave blank if none — appears on ward program only if filled" });
@@ -515,8 +739,9 @@
 
     // sacrament invitation closes the business section
     var sac = el("div", "doc-track");
+    var sacNum = hymnNumFromValue(w.sacramentHymn);
     var sacText = "“We invite your reverence as we begin the Sacrament Ordinance. The congregation will sing hymn #" +
-      (w.sacramentHymn || "___") + ", after which the Aaronic Priesthood will bless & administer the sacrament.”";
+      (sacNum || "___") + ", after which the Aaronic Priesthood will bless & administer the sacrament.”";
     var sp = el("div", "say"); sp.textContent = sacText; sac.appendChild(sp);
     doc.appendChild(sac);
 
