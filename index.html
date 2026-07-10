@@ -625,6 +625,9 @@
     if (pillTimer) clearTimeout(pillTimer);
     if (kind === "saved") {
       pillTimer = setTimeout(function () { p.className = "sync-pill hidden"; }, 1400);
+    } else if (kind === "error") {
+      // never let an error message stick forever across pages
+      pillTimer = setTimeout(function () { p.className = "sync-pill hidden"; }, 3500);
     }
   }
 
@@ -696,7 +699,7 @@
   }
   function isUuid(v) { return typeof v === "string" && /^[0-9a-f]{8}-/.test(v); }
 
-  function pushAll() {
+  function pushAll(isRetry) {
     if (!sb || !currentUser) return;
     var owner = currentUser.id;
     // Build upsert payloads. Local-only ids (non-uuid) are dropped so Postgres
@@ -733,7 +736,18 @@
       return pushChildren(owner);
     }).then(function () {
       pill("saved", "saved");
-    }).catch(function (e) { pill("error", "save failed"); console.error(e); });
+    }).catch(function (e) {
+      console.error("save attempt failed:", e);
+      // transient failures (network blips, a field losing focus mid-navigation)
+      // are common; retry once quietly before surfacing an error.
+      if (!isRetry) {
+        setTimeout(function () { pushAll(true); }, 1200);
+      } else {
+        pill("error", "save failed \u2014 retrying");
+        // still keep trying in the background so data isn't lost
+        setTimeout(function () { pushAll(true); }, 5000);
+      }
+    });
   }
 
   function pushChildren(owner) {
