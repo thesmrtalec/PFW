@@ -306,8 +306,10 @@
 
     /* flattened print container (used for the pair view) */
     #printFlat { display: block; }
-    .print-flat-page { page-break-after: always; }
-    .print-flat-page:last-child { page-break-after: auto; }
+    .print-flat-page { break-inside: avoid; }
+    /* break BEFORE each page after the first; never break AFTER anything,
+       so no engine can emit a trailing blank page */
+    .print-flat-page + .print-flat-page { page-break-before: always; break-before: page; }
     .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0.25in 0.45in !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
     /* when the flat container exists, hide the live overlay entirely */
     body.printing-flat .sheet-overlay { display: none !important; }
@@ -352,6 +354,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
+  var APP_VERSION = "v12 \u00b7 print-flat";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1927,6 +1930,12 @@
       if (sb) sb.auth.signOut().then(function () { currentUser = null; state = { weeks: [], bishopric: [], assignments: [] }; renderLogin("Signed out.", "ok"); });
     };
     document.getElementById("app").appendChild(so);
+    if (!document.getElementById("pfwVersion")) {
+      var ver = el("div", null, APP_VERSION);
+      ver.id = "pfwVersion";
+      ver.style.cssText = "text-align:center;color:var(--faint);font-family:var(--mono);font-size:9px;letter-spacing:.1em;margin:6px 0 20px;";
+      document.getElementById("app").appendChild(ver);
+    }
   }
 
   // wrap render() so sign-out link persists on list screens
