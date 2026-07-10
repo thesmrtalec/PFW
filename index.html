@@ -1553,9 +1553,13 @@
     if (w.showSacramentBlock !== false) {
       var sSac = csSection(cs, "Sacrament");
       var num = hymnNumFromValue(w.sacramentHymn);
+      // spoken form: "#173, While of These Emblems We Partake" (drop the raw
+      // colon and any "(TUNE)" tag you wouldn't read aloud)
+      var title = (w.sacramentHymn || "").replace(/^\s*\d+\s*[:\-\u2013\u2014]?\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+      var spoken = num ? ("#" + num + (title ? ", " + title : "")) : "___";
       sSac.appendChild(csSay("Read before the sacrament hymn", function (box) {
         box.appendChild(el("div", "cs-quote",
-          "\u201cWe now invite your reverence. The congregation will sing hymn #" + (num || "___") +
+          "\u201cWe now invite your reverence. The congregation will sing hymn " + spoken +
           ", after which the Aaronic Priesthood will administer the sacrament.\u201d"));
       }));
     }
