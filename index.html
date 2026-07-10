@@ -311,8 +311,10 @@
        so no engine can emit a trailing blank page */
     .print-flat-page + .print-flat-page { page-break-before: always; break-before: page; }
     .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0.25in 0.45in !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
-    /* when the flat container exists, hide the live overlay entirely */
-    body.printing-flat .sheet-overlay { display: none !important; }
+    /* When flat mode is active, the live overlay must be FULLY hidden.
+       Needs !important to beat the .sheet-overlay display:block !important above. */
+    body.printing-flat .sheet-overlay { display: none !important; height: 0 !important; overflow: hidden !important; }
+    body.printing-flat #sheetDoc, body.printing-flat .sheet-scroll { display: none !important; }
     @page { margin: 0.5in; }
   }
 </style>
@@ -354,7 +356,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "v12 \u00b7 print-flat";
+  var APP_VERSION = "build 2026.07.10-b \u00b7 print-fix";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
