@@ -183,6 +183,8 @@
   .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
   .cs-say .cs-names { font-weight: 700; color: #111; }
   .cs-say .cs-quote { color: #1c2430; }
+  .cs-say .cs-quote + .cs-checkline { margin-top: 5px; }
+  .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
   .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
@@ -253,6 +255,8 @@
 </head>
 <body>
 <div class="sync-pill hidden" id="syncPill"></div>
+<datalist id="dl-names"></datalist>
+<datalist id="dl-callings"></datalist>
 <div class="wrap" id="app"></div>
 
 <div class="sheet-overlay" id="sheetOverlay">
@@ -381,6 +385,79 @@
     if (cls) e.className = cls;
     if (text != null) e.textContent = text;
     return e;
+  }
+
+  // ---------- autofill + gentle formatting ----------
+  // Gentle Title Case: capitalize a word ONLY if it's all-lowercase.
+  // Leaves LaTannise, McKay, DeConcini, all-caps, etc. untouched.
+  function gentleName(s) {
+    s = (s || "").replace(/\s+/g, " ").trim();
+    if (!s) return s;
+    return s.split(" ").map(function (w) {
+      if (!w) return w;
+      // if the word already has any uppercase letter, don't touch it
+      if (/[A-Z]/.test(w)) return w;
+      // handle hyphenated / apostrophe pieces: capitalize each sub-part's first letter
+      return w.replace(/([a-z])([a-z']*)/g, function (m, a, b) { return a.toUpperCase() + b; });
+    }).join(" ");
+  }
+  // Callings: safe Title Case, but keep small connector words lowercase mid-phrase.
+  function formatCalling(s) {
+    s = (s || "").replace(/\s+/g, " ").trim();
+    if (!s) return s;
+    var small = { "of": 1, "the": 1, "and": 1, "to": 1, "in": 1, "for": 1, "a": 1 };
+    var words = s.split(" ");
+    return words.map(function (w, i) {
+      if (/[A-Z]/.test(w)) return w; // leave intentional caps alone
+      var lower = w.toLowerCase();
+      if (i > 0 && small[lower]) return lower;
+      return w.replace(/([a-z])([a-z']*)/g, function (m, a, b) { return a.toUpperCase() + b; });
+    }).join(" ");
+  }
+
+  // Harvest distinct names / callings from everything already entered.
+  function harvestSuggestions() {
+    var names = {}, callings = {};
+    function addName(v) { v = (v || "").trim(); if (v) names[v] = 1; }
+    function addCalling(v) { v = (v || "").trim(); if (v) callings[v] = 1; }
+    (state.weeks || []).forEach(function (w) {
+      (w.speakers || []).forEach(function (s) { addName(s.name); });
+      addName(w.youthSpeaker);
+      (w.releases || []).forEach(function (r) { addName(r.name); addCalling(r.calling); });
+      (w.callings || []).forEach(function (r) { addName(r.name); addCalling(r.calling); });
+    });
+    (state.bishopric || []).forEach(function (m) {
+      (m.counsel || []).forEach(function (c) { addName(c.name); });
+      (m.callings || []).forEach(function (c) { addName(c.name); addCalling(c.calling); });
+    });
+    (state.assignments || []).forEach(function (a) { addName(a.who); });
+    return {
+      names: Object.keys(names).sort(function (a, b) { return a.localeCompare(b); }),
+      callings: Object.keys(callings).sort(function (a, b) { return a.localeCompare(b); })
+    };
+  }
+  // Populate the shared <datalist> elements from current data.
+  function refreshDatalists() {
+    var s = harvestSuggestions();
+    fillList("dl-names", s.names);
+    fillList("dl-callings", s.callings);
+  }
+  function fillList(id, items) {
+    var dl = document.getElementById(id);
+    if (!dl) return;
+    dl.innerHTML = "";
+    items.forEach(function (v) { var o = el("option"); o.value = v; dl.appendChild(o); });
+  }
+  // Wire an input to a datalist + gentle formatter on blur.
+  function autofill(input, listId, formatter, onCommit) {
+    input.setAttribute("list", listId);
+    input.setAttribute("autocomplete", "off");
+    input.addEventListener("blur", function () {
+      var before = input.value;
+      var after = formatter(before);
+      if (after !== before) { input.value = after; onCommit(after); }
+      refreshDatalists();
+    });
   }
 
   // ---------- hymn picker ----------
@@ -934,6 +1011,7 @@
         ysf.appendChild(el("label", null, "youth speaker"));
         var ysi = el("input"); ysi.type = "text"; ysi.value = w.youthSpeaker || "";
         ysi.oninput = function () { w.youthSpeaker = ysi.value; save(); };
+        autofill(ysi, "dl-names", gentleName, function (v) { w.youthSpeaker = v; save(); });
         ysf.appendChild(ysi); ys.appendChild(ysf);
         var ytf = el("div", "field sp-topic");
         ytf.appendChild(el("label", null, "topic"));
@@ -956,6 +1034,7 @@
         nf.appendChild(el("label", null, "speaker " + (i + 1)));
         var ni = el("input"); ni.type = "text"; ni.value = sp.name || "";
         ni.oninput = function () { sp.name = ni.value; save(); };
+        autofill(ni, "dl-names", gentleName, function (v) { sp.name = v; save(); });
         nf.appendChild(ni); row.appendChild(nf);
         var topf = el("div", "field sp-topic");
         topf.appendChild(el("label", null, "topic"));
@@ -1000,12 +1079,14 @@
         nf.appendChild(el("label", null, "name"));
         var ni = el("input"); ni.type = "text"; ni.value = r.name || "";
         ni.oninput = function () { r.name = ni.value; save(); };
+        autofill(ni, "dl-names", gentleName, function (v) { r.name = v; save(); });
         nf.appendChild(ni); row.appendChild(nf);
         var cf = el("div", "field"); cf.style.marginBottom = "0";
         cf.appendChild(el("label", null, opts.callingLabel));
         var ci = el("input"); ci.type = "text"; ci.value = r.calling || "";
         if (opts.callingPlaceholder) ci.placeholder = opts.callingPlaceholder;
         ci.oninput = function () { r.calling = ci.value; save(); };
+        autofill(ci, "dl-callings", formatCalling, function (v) { r.calling = v; save(); });
         cf.appendChild(ci); row.appendChild(cf);
         var rm = el("button", "danger", "remove");
         rm.onclick = function () { w[key].splice(i, 1); save(); render(); };
@@ -1175,6 +1256,7 @@
     var addWrap = el("div", "asg-add");
     var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
     whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;";
+    whoIn.setAttribute("list", "dl-names"); whoIn.setAttribute("autocomplete", "off");
     var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
     whatIn.style.cssText = whoIn.style.cssText;
     var addBtn = el("button", "btn", "Add");
@@ -1198,6 +1280,7 @@
       nf.appendChild(el("label", null, "name"));
       var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
       ni.oninput = function () { c.name = ni.value; save(); };
+      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
       nf.appendChild(ni); row.appendChild(nf);
       var notef = el("div", "field"); notef.style.marginBottom = "0";
       notef.appendChild(el("label", null, "note"));
@@ -1236,11 +1319,13 @@
       top.appendChild(el("label", null, "name"));
       var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
       ni.oninput = function () { c.name = ni.value; save(); };
+      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
       top.appendChild(ni); row.appendChild(top);
       var cf = el("div", "field"); cf.style.marginBottom = "6px";
       cf.appendChild(el("label", null, "calling / release"));
       var ci = el("input"); ci.type = "text"; ci.value = c.calling || "";
       ci.oninput = function () { c.calling = ci.value; save(); };
+      autofill(ci, "dl-callings", formatCalling, function (v) { c.calling = v; save(); });
       cf.appendChild(ci); row.appendChild(cf);
       var sf = el("div", "field"); sf.style.marginBottom = "0";
       sf.appendChild(el("label", null, "stage"));
@@ -1515,19 +1600,20 @@
     if (hasBiz) {
       var sBiz = csSection(cs, "Ward Business");
       if (relRows.length) {
-        sBiz.appendChild(csSay("Releases \u2014 read, then invite thanks", function (box) {
+        sBiz.appendChild(csSay("Releases", function (box) {
           var q = el("div", "cs-quote");
           q.appendChild(document.createTextNode("\u201cWe have released "));
           var parts = relRows.map(function (r) {
             return r.calling ? (r.name + " as " + r.calling) : r.name;
           });
           q.appendChild(el("span", "cs-names", parts.join(", ")));
-          q.appendChild(document.createTextNode(". Those who wish to express thanks, please raise your hand.\u201d"));
+          q.appendChild(document.createTextNode(" and are thankful for their service. All who wish to give a vote of thanks please manifest it.\u201d"));
           box.appendChild(q);
         }));
       }
       if (calRows.length) {
-        sBiz.appendChild(csSay("Sustainings \u2014 ask each to stand", function (box) {
+        sBiz.appendChild(csSay("Sustainings", function (box) {
+          box.appendChild(el("div", "cs-quote", "\u201cThe following members have accepted callings. Please stand if your name is said.\u201d"));
           calRows.forEach(function (r) {
             var line = el("div", "cs-checkline");
             line.appendChild(el("span", "cs-box", "\u25a1"));
@@ -1535,7 +1621,7 @@
             line.appendChild(el("span", "cs-names", label));
             box.appendChild(line);
           });
-          box.appendChild(el("div", "cs-quote", "\u201cAll in favor, please raise your hand. Any opposed. Thank you; you may be seated.\u201d"));
+          box.appendChild(el("div", "cs-quote", "\u201cThose willing to sustain them please manifest it. Any opposed, by the same sign.\u201d"));
         }));
       }
     }
@@ -1651,6 +1737,7 @@
   var _render = render;
   render = function () {
     _render();
+    if (currentUser) refreshDatalists();
     if (currentUser && view.screen === "list") { var so = document.getElementById("pfwSignOut"); if (so) document.getElementById("app").appendChild(so); else addSignOut(); }
   };
 
