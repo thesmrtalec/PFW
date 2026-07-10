@@ -1880,8 +1880,14 @@
   }
   document.getElementById("sheetPrint").onclick = function () {
     preparePrint();
+    // NOTE: on iOS Safari window.print() is async — the preview stays open and
+    // window.print() returns immediately. A short setTimeout cleanup would tear
+    // down #printFlat mid-preview, letting iOS re-paginate the live pair tree
+    // (and emit a phantom blank page). Clean up on afterprint; the long timeout
+    // is only a safety net for browsers that never fire afterprint, and is far
+    // longer than any real preview interaction.
     window.print();
-    setTimeout(cleanupPrint, 500);
+    setTimeout(cleanupPrint, 60000);
   };
   window.addEventListener("afterprint", cleanupPrint);
 
