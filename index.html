@@ -287,9 +287,11 @@
     #sheetDoc { height: auto !important; min-height: 0 !important; }
     /* swipe pair -> stacked full pages, one per sheet */
     .pair-track { display: block !important; overflow: visible !important; height: auto !important; }
-    .pair-page { display: block !important; padding: 0 !important; }
-    .pair-page:not(:last-child) { page-break-after: always; break-after: page; }
-    .pair-dots, .pair-label { display: none !important; }
+    .pair-page { display: block !important; padding: 0 !important; margin: 0 !important; }
+    /* break BEFORE the 2nd+ page (not after the 1st) to avoid a trailing blank page */
+    .pair-page + .pair-page { page-break-before: always; break-before: page; }
+    .pair-page:first-child { page-break-before: avoid; break-before: avoid; }
+    .pair-dots, .pair-label { display: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; }
     @page { margin: 0.5in; }
   }
 </style>
