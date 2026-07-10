@@ -1452,9 +1452,6 @@
     var addC = el("button", "add-line", "+ add person / family");
     addC.onclick = function () { if (!m.counsel) m.counsel = []; m.counsel.push({ id: uid(), name: "", note: "" }); save(); render(); };
     zC.appendChild(addC);
-    // ministering folded in here (was its own section) \u2014 same conversation
-    zC.appendChild(el("div", "sub-label", "Ministering"));
-    textField(zC, function () { return m.ministering; }, function (v) { m.ministering = v; }, { area: true, rows: 2, hint: "status / who needs a visit / assignments to make" });
     app.appendChild(zC);
 
     // ===== COVENANT PATH PROGRESS =====
@@ -1566,15 +1563,6 @@
         sC.appendChild(csRow(c.name, c.note || ""));
       });
       cs.appendChild(sC);
-    }
-
-    // ministering
-    if (m.ministering) {
-      var sMin = el("div", "cs-sec");
-      sMin.appendChild(el("div", "cs-h", "Ministering"));
-      sMin.appendChild(el("hr", "cs-hrule"));
-      lines(m.ministering).forEach(function (l) { sMin.appendChild(el("div", "cs-note", l)); });
-      cs.appendChild(sMin);
     }
 
     // covenant path progress (stored under the legacy "ordinances" key)
