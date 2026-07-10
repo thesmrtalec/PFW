@@ -738,17 +738,20 @@
       pill("saved", "saved");
     }).catch(function (e) {
       console.error("save attempt failed:", e);
+      var msg = (e && (e.message || e.hint || e.details || e.code)) ? String(e.message || e.code) : "unknown";
+      lastSaveError = msg;
       // transient failures (network blips, a field losing focus mid-navigation)
       // are common; retry once quietly before surfacing an error.
       if (!isRetry) {
         setTimeout(function () { pushAll(true); }, 1200);
       } else {
-        pill("error", "save failed \u2014 retrying");
+        pill("error", "save failed: " + msg.slice(0, 60));
         // still keep trying in the background so data isn't lost
         setTimeout(function () { pushAll(true); }, 5000);
       }
     });
   }
+  var lastSaveError = "";
 
   function pushChildren(owner) {
     var ops = [];
@@ -758,13 +761,17 @@
       parents.forEach(function (p) {
         if (!isUuid(p.id)) return;
         ops.push(
-          sb.from(table).delete().eq(parentField, p.id).then(function () {
+          sb.from(table).delete().eq(parentField, p.id).then(function (delRes) {
+            if (delRes && delRes.error) throw new Error(table + " delete: " + delRes.error.message);
             var rows = extract(p).map(function (row, idx) {
               var o = { owner: owner, position: idx };
               o[parentField] = p.id;
               return Object.assign(o, row);
             });
-            return rows.length ? sb.from(table).insert(rows) : Promise.resolve();
+            if (!rows.length) return;
+            return sb.from(table).insert(rows).then(function (insRes) {
+              if (insRes && insRes.error) throw new Error(table + " insert: " + insRes.error.message);
+            });
           })
         );
       });
@@ -793,9 +800,12 @@
                   origin_meeting: isUuid(a.meetingId) ? a.meetingId : null };
       if (isUuid(a.id)) { row.id = a.id; upAsg.push(row); } else inAsg.push({ local: a, row: row });
     });
-    if (upAsg.length) ops.push(sb.from("assignments").upsert(upAsg));
+    if (upAsg.length) ops.push(sb.from("assignments").upsert(upAsg).then(function (res) {
+      if (res && res.error) throw new Error("assignments upsert: " + res.error.message);
+    }));
     inAsg.forEach(function (pair) {
       ops.push(sb.from("assignments").insert(pair.row).select().then(function (res) {
+        if (res && res.error) throw new Error("assignments insert: " + res.error.message);
         if (res.data && res.data[0]) pair.local.id = res.data[0].id;
       }));
     });
@@ -1875,6 +1885,26 @@
     if (currentUser) refreshDatalists();
     if (currentUser && view.screen === "list") { var so = document.getElementById("pfwSignOut"); if (so) document.getElementById("app").appendChild(so); else addSignOut(); }
   };
+
+  // Re-fetch from the cloud when returning to the app, so changes made on
+  // another device (iPad <-> phone) show up. Guarded so it never clobbers
+  // an in-progress edit: only refreshes on the list screen, and never while
+  // a save is pending.
+  var lastRefresh = 0;
+  function refreshFromCloud() {
+    if (!sb || !currentUser) return;
+    if (view.screen !== "list") return;        // don't wipe an open editor
+    if (saveTimer) return;                       // a save is queued; skip
+    var now = Date.now();
+    if (now - lastRefresh < 3000) return;        // throttle
+    lastRefresh = now;
+    load(function (err) { if (!err) render(); });
+  }
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") refreshFromCloud();
+  });
+  window.addEventListener("focus", refreshFromCloud);
+  window.addEventListener("pageshow", function () { refreshFromCloud(); });
 
   // startup: restore session if present, else show login
   (function start() {
