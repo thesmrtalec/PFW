@@ -455,7 +455,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.42";
+  var APP_VERSION = "Pioneer Farms v1.0.43";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2453,9 +2453,21 @@
       row("Program", "Testimony Meeting");
     } else {
       row("Youth Speaker", w.youthSpeaker);
-      (w.speakers || []).forEach(function (sp, i) { if (sp.name) row("Speaker " + (i + 1), sp.name); });
+      // Rest (intermediate) hymn goes BEFORE the concluding speaker, not after
+      // all speakers. With 2+ named speakers it lands between the last two;
+      // with fewer, it falls after the speaker(s), before the closing hymn.
+      var named = (w.speakers || []).filter(function (sp) { return sp.name; });
+      var restVal = hymnClean(w.restHymn);
+      var restDone = false;
+      named.forEach(function (sp, i) {
+        // insert the rest hymn right before the final speaker
+        if (!restDone && restVal && named.length >= 2 && i === named.length - 1) {
+          row("Rest Hymn", restVal); restDone = true;
+        }
+        row("Speaker " + (i + 1), sp.name);
+      });
+      if (!restDone) row("Rest Hymn", restVal);
     }
-    row("Rest Hymn", hymnClean(w.restHymn));
     row("Musical Number", w.musical);
     row("Closing Hymn", hymnClean(w.closingHymn));
     row("Benediction", w.benediction);
