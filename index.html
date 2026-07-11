@@ -501,7 +501,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.54";
+  var APP_VERSION = "Pioneer Farms v1.0.55";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2778,7 +2778,7 @@
     var openBits = [];
     if (w.openingHymn) openBits.push("Opening hymn " + hymnSpoken(w.openingHymn));
     if (w.invocation) openBits.push("Invocation: " + w.invocation);
-    cards.push({ kicker: "Welcome", title: "Good morning", script: "\u201cWelcome to sacrament meeting. We\u2019re glad you\u2019re here.\u201d", sub: openBits.join("  \u00b7  ") });
+    cards.push({ kicker: "Welcome", title: "Good morning", script: "\u201cWelcome to The Church of Jesus Christ of Latter-day Saints. This is the Pioneer Farms Ward sacrament meeting.\u201d", sub: openBits.join("  \u00b7  ") });
 
     // 2. Announcements
     if (w.announcements) {
@@ -2820,14 +2820,23 @@
       cards.push({ kicker: "Program", title: "Testimony Meeting",
         script: "Bear testimony, then invite the congregation to share." });
     } else {
-      var order = [];
-      if (w.youthSpeaker) order.push({ name: w.youthSpeaker });
-      namedSpeakers.forEach(function (s) { order.push({ name: s.name, topic: s.topic }); });
+      // one card per speaker, in order; rest (intermediate) hymn card goes
+      // right before the concluding speaker
+      var speakerList = [];
+      if (w.youthSpeaker) speakerList.push({ label: "Youth speaker", name: w.youthSpeaker, topic: w.youthTopic });
+      namedSpeakers.forEach(function (s, i) { speakerList.push({ label: "Speaker " + (i + 1), name: s.name, topic: s.topic }); });
       var restSp = hymnSpoken(w.restHymn);
-      if (order.length) {
-        cards.push({ kicker: "Program", title: "Speakers",
-          names: order.map(function (o) { return o.name + (o.topic ? "  \u2014  " + o.topic : ""); }),
-          sub: restSp ? ("Rest hymn " + restSp + " between speakers") : "" });
+      var restIdx = restSp && speakerList.length >= 2 ? speakerList.length - 1 : -1; // before last speaker
+      speakerList.forEach(function (s, i) {
+        if (i === restIdx) {
+          cards.push({ kicker: "Rest hymn", title: "Rest hymn", script: restSp });
+        }
+        cards.push({ kicker: s.label, title: s.name,
+          script: s.topic ? ("\u201c" + s.topic + "\u201d") : "", sub: "Invite them to the stand" });
+      });
+      // rest hymn with only one/zero speakers (no "before final" slot) still shows
+      if (restSp && restIdx === -1) {
+        cards.push({ kicker: "Rest hymn", title: "Rest hymn", script: restSp });
       }
       if (w.musical) cards.push({ kicker: "Program", title: "Musical number", script: w.musical });
     }
