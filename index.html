@@ -455,7 +455,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.43";
+  var APP_VERSION = "Pioneer Farms v1.0.44";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1189,6 +1189,32 @@
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }
   function isPast(iso) { return new Date(iso + "T23:59:59").getTime() < Date.now(); }
+
+  // Assignment "age": accountability is measured in Sundays, not days. An
+  // assignment stays fresh (no age shown) until a Sunday has passed since it
+  // was made. Once one or more Sundays have elapsed, return a soft label.
+  function sundaysSince(iso) {
+    if (!iso) return 0;
+    var made = new Date(iso + "T12:00:00");
+    var now = new Date(); now.setHours(12, 0, 0, 0);
+    if (now <= made) return 0;
+    // count Sundays strictly after 'made' up to and including today
+    var count = 0;
+    var d = new Date(made);
+    // advance to the first Sunday after 'made'
+    d.setDate(d.getDate() + ((7 - d.getDay()) % 7 || 7));
+    while (d <= now) { count++; d.setDate(d.getDate() + 7); }
+    return count;
+  }
+  // "" while fresh; a gentle age once a Sunday has passed.
+  function assignmentAge(iso) {
+    var s = sundaysSince(iso);
+    if (s < 1) return "";
+    if (s === 1) return "carried over";
+    if (s < 4) return s + " wks";
+    var months = Math.round(s / 4.34);
+    return months <= 1 ? "over a month" : months + " mos";
+  }
   function findWeek(id) { return state.weeks.filter(function (w) { return w.id === id; })[0]; }
 
   function render() {
@@ -1652,9 +1678,12 @@
       var body = el("div", "asg-body");
       body.appendChild(el("div", "asg-what", a.what || "(no description)"));
       var meta = el("div", "asg-meta");
-      if (a.who) { var wsp = el("span", "asg-who", a.who); meta.appendChild(wsp); meta.appendChild(document.createTextNode("  \u00b7  ")); }
-      meta.appendChild(document.createTextNode("since " + fmtShort(a.dateMade)));
-      if (a.meetingId !== m.id && a.status !== "done") meta.appendChild(el("span", "asg-carry", "carried"));
+      if (a.who) { var wsp = el("span", "asg-who", a.who); meta.appendChild(wsp); }
+      var age = assignmentAge(a.dateMade);
+      if (age) {
+        if (a.who) meta.appendChild(document.createTextNode("  \u00b7  "));
+        meta.appendChild(el("span", "asg-carry", age));
+      }
       body.appendChild(meta);
       row.appendChild(body);
       var del = el("div", "asg-del", "\u00d7");
@@ -1807,8 +1836,9 @@
         line.appendChild(el("span", "cs-box", "\u25a1"));
         var t = el("span");
         if (a.who) { t.appendChild(el("strong", null, a.who + ": ")); }
-        t.appendChild(document.createTextNode(a.what + "  "));
-        t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")"));
+        t.appendChild(document.createTextNode(a.what));
+        var agv = assignmentAge(a.dateMade);
+        if (agv) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + agv + ")")); }
         line.appendChild(t);
         sA.appendChild(line);
       });
@@ -1922,7 +1952,7 @@
         var t = el("span");
         t.appendChild(document.createTextNode(a.what || "(assignment)"));
         if (a.meetingId === m.id) t.appendChild(el("span", "fu-new", "new"));
-        else { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")")); }
+        else { var fage = assignmentAge(a.dateMade); if (fage) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + fage + ")")); } }
         item.appendChild(t);
         block.appendChild(item);
       });
@@ -2063,7 +2093,8 @@
       body.appendChild(el("div", "asg-what", a.what || "(no description)"));
       var meta = [];
       if (a.who) meta.push(a.who);
-      meta.push("since " + fmtShort(a.dateMade));
+      var cage = assignmentAge(a.dateMade);
+      if (cage) meta.push(cage);
       body.appendChild(el("div", "asg-meta", meta.join(" \u00b7 ")));
       row.appendChild(body);
       var del = el("button", "asg-del", "\u00d7");
@@ -2197,8 +2228,9 @@
         line.appendChild(el("span", "cs-box", "\u25a1"));
         var t = el("span");
         if (a.who) { t.appendChild(el("strong", null, a.who + ": ")); }
-        t.appendChild(document.createTextNode(a.what + "  "));
-        t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")"));
+        t.appendChild(document.createTextNode(a.what));
+        var agv = assignmentAge(a.dateMade);
+        if (agv) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + agv + ")")); }
         line.appendChild(t);
         sA.appendChild(line);
       });
@@ -2336,7 +2368,7 @@
         var t = el("span");
         t.appendChild(document.createTextNode(a.what || "(assignment)"));
         if (a.meetingId === m.id) t.appendChild(el("span", "fu-new", "new"));
-        else { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")")); }
+        else { var fage = assignmentAge(a.dateMade); if (fage) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + fage + ")")); } }
         item.appendChild(t);
         block.appendChild(item);
       });
@@ -2658,7 +2690,8 @@
           row.appendChild(chk);
           var body = el("div", "asg-body");
           body.appendChild(el("div", "asg-what", a.what || "(no description)"));
-          body.appendChild(el("div", "asg-meta", "since " + fmtShort(a.dateMade)));
+          var oage = assignmentAge(a.dateMade);
+          if (oage) body.appendChild(el("div", "asg-meta", oage));
           row.appendChild(body);
           block.appendChild(row);
         });
