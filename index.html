@@ -217,6 +217,8 @@
   .cue-names li { font-size: 22px; font-weight: 600; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; gap: 12px; align-items: baseline; }
   .cue-names li .cue-box { color: #6f7a88; font-size: 18px; }
   .cue-sub { font-size: 16px; color: #9aa3b2; margin-top: 4px; }
+  .cue-card-quote { text-align: center; }
+  .cue-quote { font-family: var(--serif); font-size: 30px; line-height: 1.4; color: #f2f4f7; }
   .cue-tap { position: absolute; top: 60px; bottom: 40px; width: 38%; z-index: 2; }
   .cue-tap-left { left: 0; }
   .cue-tap-right { right: 0; }
@@ -230,6 +232,7 @@
     .cue-names li { font-size: 38px; padding: 16px 0; }
     .cue-names li .cue-box { font-size: 30px; }
     .cue-sub { font-size: 24px; }
+    .cue-quote { font-size: 54px; line-height: 1.35; }
     .cue-dot { width: 10px; height: 10px; }
     .cue-dot.active { width: 28px; }
   }
@@ -514,7 +517,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.57";
+  var APP_VERSION = "Pioneer Farms v1.0.58";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1752,10 +1755,9 @@
     df.appendChild(dinput); z0.appendChild(df);
     app.appendChild(z0);
 
-    // ===== SPIRITUAL THOUGHT (prints at the very top of the agenda) =====
+    // ===== (unlabeled) opens the agenda — a line to sit with, no exposition =====
     var zT = el("div", "zone");
-    zoneHead(zT, "Spiritual thought", "opens the agenda");
-    textField(zT, function () { return m.thought; }, function (v) { m.thought = v; }, { area: true, rows: 2, hint: "a scripture, quote, or question to center on \u2014 prints at the top, above everything" });
+    textField(zT, function () { return m.thought; }, function (v) { m.thought = v; }, { area: true, rows: 2, hint: "opens the agenda \u2014 stands on its own, no heading" });
     app.appendChild(zT);
 
     // ===== OPEN ASSIGNMENTS (the engine) =====
@@ -2863,7 +2865,7 @@
   function buildBishopricCueCards(m) {
     var cards = [];
     if (m.thought) {
-      cards.push({ kicker: "Spiritual thought", title: "To center us", script: lines(m.thought).join("  ") });
+      cards.push({ quote: lines(m.thought).join("  ") });
     }
     var open = assignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
     cards.push({ kicker: "Follow up", title: "Open assignments",
@@ -2939,6 +2941,18 @@
     stage.innerHTML = "";
     if (!c) return;
     var card = el("div", "cue-card");
+    // A bare quote card: the words alone, centered. No kicker, no title.
+    if (c.quote) {
+      card.classList.add("cue-card-quote");
+      card.appendChild(el("div", "cue-quote", c.quote));
+      stage.appendChild(card);
+      var pq = document.getElementById("cueProgress");
+      pq.innerHTML = "";
+      cueState.cards.forEach(function (_, idx) {
+        pq.appendChild(el("div", "cue-dot" + (idx === cueState.i ? " active" : "")));
+      });
+      return;
+    }
     if (c.kicker) card.appendChild(el("div", "cue-kicker", c.kicker));
     if (c.title) card.appendChild(el("div", "cue-title", c.title));
     if (c.script) card.appendChild(el("div", "cue-script", c.script));
