@@ -465,7 +465,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.51";
+  var APP_VERSION = "Pioneer Farms v1.0.52";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -876,6 +876,7 @@
         restHymn: m.rest_hymn || "", closingHymn: m.closing_hymn || "",
         invocation: m.invocation || "", benediction: m.benediction || "",
         musical: m.musical || "", blessings: m.blessings || "", moveins: m.moveins || "",
+        moveinRows: Array.isArray(m.movein_rows) ? m.movein_rows : [],
         youthSpeaker: m.youth_speaker || "", youthTopic: m.youth_topic || "",
         youthShown: m.youth_shown !== false, testimony: !!m.testimony,
         announcements: m.announcements || "", showSacramentBlock: m.show_sacrament_block !== false,
@@ -944,6 +945,7 @@
         rest_hymn: w.restHymn, closing_hymn: w.closingHymn,
         invocation: w.invocation, benediction: w.benediction,
         musical: w.musical, blessings: w.blessings, moveins: w.moveins,
+        movein_rows: (w.moveinRows || []).filter(function (r) { return (r.household || "").trim(); }),
         youth_speaker: w.youthSpeaker, youth_topic: w.youthTopic,
         youth_shown: w.youthShown, testimony: w.testimony,
         announcements: w.announcements, show_sacrament_block: w.showSacramentBlock,
@@ -1176,6 +1178,7 @@
       musical: "",
       blessings: "",
       moveins: "",
+      moveinRows: [],
       speakers: [ { name: "", topic: "" }, { name: "", topic: "" } ],
       youthSpeaker: "", youthTopic: "", youthShown: true,
       testimony: false,
@@ -1509,7 +1512,23 @@
     // ===== Move-in records (conducting cue) =====
     var zMI = el("div", "zone");
     zoneHead(zMI, "Move-in records", null, "conducting", "badge-private");
-    bindText(zMI, "moveins", { label: "new records received", hint: "one person or household per line \u2014 e.g. \u201cBen, Charisa, Amelia & Lovissa Jensen\u201d. Read as a welcome; prints on the conducting sheet" });
+    zMI.appendChild(el("div", "hint", "One household per row \u2014 each becomes its own bullet on the conducting sheet. For a family, put them together: \u201cBen, Charisa, Amelia & Lovissa Jensen\u201d."));
+    if (!w.moveinRows) w.moveinRows = [];
+    w.moveinRows.forEach(function (r, i) {
+      var row = el("div", "counsel-row");
+      var f = el("div", "field"); f.style.marginBottom = "0"; f.style.flex = "1";
+      f.appendChild(el("label", null, "person / household"));
+      var inp = el("input"); inp.type = "text"; inp.value = r.household || "";
+      inp.oninput = function () { r.household = inp.value; save(); };
+      f.appendChild(inp); row.appendChild(f);
+      var rm = el("button", "danger", "remove");
+      rm.onclick = function () { w.moveinRows.splice(i, 1); save(); render(); };
+      row.appendChild(rm);
+      zMI.appendChild(row);
+    });
+    var addMI = el("button", "add-line", "+ add person / household");
+    addMI.onclick = function () { w.moveinRows.push({ household: "" }); save(); render(); };
+    zMI.appendChild(addMI);
     app.appendChild(zMI);
 
     // ===== Ward business (private) =====
@@ -2614,7 +2633,9 @@
 
     var relRows = (w.releases || []).filter(function (r) { return r.name || r.calling; });
     var calRows = (w.callings || []).filter(function (r) { return r.name || r.calling; });
-    var moveinNames = lines(w.moveins || "");
+    var moveinNames = (w.moveinRows && w.moveinRows.length)
+      ? w.moveinRows.map(function (r) { return (r.household || "").trim(); }).filter(Boolean)
+      : lines(w.moveins || "");
     var hasAnn = !!w.announcements;
     var hasBiz = relRows.length || calRows.length || moveinNames.length;
 
@@ -2684,7 +2705,7 @@
       var spoken = num ? ("#" + num + (title ? ", " + title : "")) : "___";
       sSac.appendChild(csSay("Read before the sacrament hymn", function (box) {
         box.appendChild(el("div", "cs-quote",
-          "\u201cWe now invite your reverence. The congregation will sing hymn " + spoken +
+          "\u201cThe congregation will sing hymn " + spoken +
           ", after which the Aaronic Priesthood will administer the sacrament.\u201d"));
       }));
     }
