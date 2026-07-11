@@ -207,7 +207,7 @@
   .cue-progress { flex: 1; display: flex; gap: 5px; justify-content: center; }
   .cue-dot { width: 7px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.22); transition: background .2s, width .2s; }
   .cue-dot.active { background: #8fb0a8; width: 20px; }
-  .cue-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 28px 28px; position: relative; z-index: 1; }
+  .cue-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 28px 28px; position: relative; z-index: 1; overflow-y: auto; }
   .cue-card { width: 100%; max-width: 620px; color: #f2f4f7; animation: cueIn .18s ease; }
   @keyframes cueIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   .cue-kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: #8fb0a8; margin-bottom: 18px; }
@@ -221,11 +221,23 @@
   .cue-tap-left { left: 0; }
   .cue-tap-right { right: 0; }
   .cue-hint { text-align: center; font-size: 12px; color: #5f6875; padding: 0 0 14px; position: relative; z-index: 3; }
+  /* Cast / big-screen: scale the type way up so a room can read it. */
+  @media (min-width: 900px) {
+    .cue-card { max-width: 1100px; }
+    .cue-kicker { font-size: 20px; margin-bottom: 26px; }
+    .cue-title { font-size: 64px; margin-bottom: 32px; }
+    .cue-script { font-size: 40px; line-height: 1.4; margin-bottom: 34px; }
+    .cue-names li { font-size: 38px; padding: 16px 0; }
+    .cue-names li .cue-box { font-size: 30px; }
+    .cue-sub { font-size: 24px; }
+    .cue-dot { width: 10px; height: 10px; }
+    .cue-dot.active { width: 28px; }
+  }
   .cue-btn { display: block; width: 100%; max-width: 620px; margin: 10px auto 0; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; }
   .sheet-overlay.open { display: block; }
-  .sheet-toolbar { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
-  .sheet-toolbar .btn { padding: 9px 16px; }
-  .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
+  .sheet-toolbar { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--rule); padding: 12px 14px; display: flex; gap: 8px; align-items: center; z-index: 2; }
+  .sheet-toolbar .btn { padding: 9px 13px; font-size: 14px; white-space: nowrap; }
+  .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; min-width: 44px; }
   .sheet-scroll { padding: 22px 16px 60px; }
 
   /* swipeable pair (conducting = program + brief) */
@@ -462,6 +474,7 @@
 <div class="sheet-overlay" id="sheetOverlay">
   <div class="sheet-toolbar">
     <button class="close" id="sheetClose">&lsaquo; back</button>
+    <button class="btn secondary" id="sheetCue">&#9654; Cue Cards</button>
     <button class="btn" id="sheetPdf">Share PDF</button>
   </div>
   <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
@@ -501,7 +514,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.55";
+  var APP_VERSION = "Pioneer Farms v1.0.57";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1621,10 +1634,6 @@
     b2.onclick = function () { currentSheet = { type: "conducting", data: w }; openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
-
-    var cueBtn = el("button", "btn cue-btn", "\u25B6 Cue Cards \u2014 conduct live");
-    cueBtn.onclick = function () { openCueCards(w); };
-    app.appendChild(cueBtn);
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -2850,6 +2859,79 @@
     return cards;
   }
 
+  // ---- Cue cards for the BISHOPRIC agenda (screen-facing) ----
+  function buildBishopricCueCards(m) {
+    var cards = [];
+    if (m.thought) {
+      cards.push({ kicker: "Spiritual thought", title: "To center us", script: lines(m.thought).join("  ") });
+    }
+    var open = assignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
+    cards.push({ kicker: "Follow up", title: "Open assignments",
+      names: open.length ? open.map(function (a) {
+        var age = assignmentAge(a.dateMade);
+        return (a.who ? a.who + " \u2014 " : "") + a.what + (age ? "  (" + age + ")" : "");
+      }) : null,
+      script: open.length ? "" : "None open. Clean slate." });
+    if (m.moveins) {
+      cards.push({ kicker: "Move-ins", title: "New records", names: lines(m.moveins) });
+    }
+    var counsel = (m.counsel || []).filter(function (c) { return c.name; });
+    if (counsel.length) {
+      cards.push({ kicker: "Counsel together", title: "Who needs us",
+        names: counsel.map(function (c) { return c.name + (c.note ? "  \u2014  " + c.note : ""); }) });
+    }
+    if (m.ordinances) {
+      cards.push({ kicker: "Covenant path", title: "Covenant path progress", names: lines(m.ordinances) });
+    }
+    var kal = (m.callings || []).filter(function (c) { return c.name || c.calling; });
+    if (kal.length) {
+      cards.push({ kicker: "Callings", title: "Callings & releases",
+        names: kal.map(function (c) {
+          return (c.calling || "\u2014") + (c.name ? "  \u2014  " + c.name : "") + "  (" + (c.status || "consider") + ")";
+        }) });
+    }
+    if (m.notes) {
+      cards.push({ kicker: "Notes", title: "Notes & instruction", names: lines(m.notes) });
+    }
+    return cards;
+  }
+
+  // ---- Cue cards for the WARD COUNCIL agenda (screen-facing) ----
+  function buildCouncilCueCards(m) {
+    var cards = [];
+    var open = councilAssignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
+    cards.push({ kicker: "Follow up", title: "Open assignments",
+      names: open.length ? open.map(function (a) {
+        var age = assignmentAge(a.dateMade);
+        return (a.who ? a.who + " \u2014 " : "") + a.what + (age ? "  (" + age + ")" : "");
+      }) : null,
+      script: open.length ? "" : "None open. Clean slate." });
+    if (m.moveins) {
+      cards.push({ kicker: "Move-ins", title: "New records", names: lines(m.moveins) });
+    }
+    if (m.instruction) {
+      cards.push({ kicker: "Instruction & focus", title: "Where we're pointed", script: lines(m.instruction).join("  ") });
+    }
+    var counsel = (m.counsel || []).filter(function (c) { return c.name; });
+    if (counsel.length) {
+      cards.push({ kicker: "Counsel together", title: "Who needs us",
+        names: counsel.map(function (c) { return c.name + (c.note ? "  \u2014  " + c.note : ""); }) });
+    }
+    // one card per mission lane \u2014 keeps the room on one lane at a time
+    COUNCIL_MISSIONS.forEach(function (mi) {
+      if (!m[mi.key]) return;
+      cards.push({ kicker: "Work of salvation", title: mi.title,
+        names: lines(m[mi.key]), sub: "coordinate, don\u2019t report" });
+    });
+    if (m.coordination) {
+      cards.push({ kicker: "Coordination", title: "Calendar & coordination", names: lines(m.coordination) });
+    }
+    if (m.notes) {
+      cards.push({ kicker: "Notes", title: "Notes", names: lines(m.notes) });
+    }
+    return cards;
+  }
+
   var cueState = { cards: [], i: 0 };
   function renderCueCard() {
     var stage = document.getElementById("cueStage");
@@ -2881,12 +2963,13 @@
   }
   function cueNext() { if (cueState.i < cueState.cards.length - 1) { cueState.i++; renderCueCard(); } }
   function cuePrev() { if (cueState.i > 0) { cueState.i--; renderCueCard(); } }
-  function openCueCards(w) {
-    cueState.cards = buildCueCards(w);
+  function openCueDeck(cards) {
+    cueState.cards = cards || [];
     cueState.i = 0;
     renderCueCard();
     document.getElementById("cueOverlay").classList.add("open");
   }
+  function openCueCards(w) { openCueDeck(buildCueCards(w)); }
   document.getElementById("cueClose").onclick = function () { document.getElementById("cueOverlay").classList.remove("open"); };
   document.getElementById("cueTapRight").onclick = cueNext;
   document.getElementById("cueTapLeft").onclick = cuePrev;
@@ -2897,11 +2980,29 @@
     else if (e.key === "Escape") document.getElementById("cueOverlay").classList.remove("open");
   });
 
+  // Cue Cards works on the sacrament sheets AND both agendas (agenda cards are
+  // meant to be cast to a screen the whole council can see). Hidden on
+  // follow-ups and the assignments overview, which have no card arc.
+  var CUE_TYPES = { program: 1, conducting: 1, agenda: 1, "council-agenda": 1 };
+  function syncCueButton() {
+    var btn = document.getElementById("sheetCue");
+    var ok = currentSheet && CUE_TYPES[currentSheet.type] && currentSheet.data;
+    btn.style.display = ok ? "" : "none";
+  }
+  document.getElementById("sheetCue").onclick = function () {
+    if (!currentSheet || !currentSheet.data) return;
+    var t = currentSheet.type, d = currentSheet.data;
+    if (t === "agenda") openCueDeck(buildBishopricCueCards(d));
+    else if (t === "council-agenda") openCueDeck(buildCouncilCueCards(d));
+    else openCueDeck(buildCueCards(d));
+  };
+
   function openSheet(node) {
     var host = document.getElementById("sheetDoc");
     host.className = "doc";
     host.innerHTML = "";
     host.appendChild(node);
+    syncCueButton();
     document.getElementById("sheetOverlay").classList.add("open");
     document.querySelector(".sheet-scroll").scrollTop = 0;
   }
@@ -2991,6 +3092,7 @@
     d0.onclick = function () { track.scrollTo({ left: 0, behavior: "smooth" }); };
     d1.onclick = function () { track.scrollTo({ left: track.clientWidth, behavior: "smooth" }); };
 
+    syncCueButton();
     document.getElementById("sheetOverlay").classList.add("open");
     document.querySelector(".sheet-scroll").scrollTop = 0;
     track.scrollLeft = 0;
