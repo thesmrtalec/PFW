@@ -258,9 +258,9 @@
   .cs-sub-lg { font-size: 17px; margin-top: 4px; color: #222; }
   .cs-date-lg { font-size: 13px; margin: 5px 0 20px; }
 
-  .cs-sec { margin: 0 0 14px; }
-  .cs-h { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #111; margin: 0 0 4px; }
-  .cs-hrule { border: none; border-top: 2px solid #111; margin: 0 0 8px; }
+  .cs-sec { margin: 0 0 10px; }
+  .cs-h { font-family: var(--sans); font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #111; margin: 0 0 3px; }
+  .cs-hrule { border: none; border-top: 2px solid #111; margin: 0 0 6px; }
 
   /* run-of-show rows */
   .cs-row { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; font-size: 15px; line-height: 1.35; }
@@ -270,8 +270,8 @@
   .cs-row.dim .cs-val { color: #999; }
 
   /* verbatim vote callouts */
-  .cs-say { border-left: 3px solid #111; background: #f6f7f9; padding: 8px 12px; margin: 7px 0; font-size: 14.5px; line-height: 1.5; }
-  .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
+  .cs-say { border-left: 3px solid #111; background: #f6f7f9; padding: 6px 11px; margin: 5px 0; font-size: 14px; line-height: 1.4; }
+  .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 2px; }
   .cs-say .cs-names { font-weight: 700; color: #111; }
   /* Name lists: single column by default (correct on a narrow phone). Two
      columns only when there's real width — the PDF capture clone (fixed wide)
@@ -283,8 +283,8 @@
     .cs-namegrid:not(.one-col) { grid-template-columns: 1fr 1fr; }
   }
   .cs-say .cs-quote { color: #1c2430; }
-  .cs-say .cs-quote + .cs-checkline { margin-top: 5px; }
-  .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
+  .cs-say .cs-quote + .cs-checkline { margin-top: 4px; }
+  .cs-say .cs-checkline + .cs-quote { margin-top: 4px; }
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
   .cs-mission-h { font-family: var(--sans); font-size: 12px; font-weight: 700; color: #1c2430; margin: 8px 0 3px; }
   .cs-thought { font-family: var(--serif); font-style: italic; font-size: 14.5px; line-height: 1.5; color: #33404f; text-align: center; margin: 14px auto 4px; max-width: 84%; }
@@ -293,7 +293,7 @@
   .cs-checkline.is-new, .cs-checkline.is-new *, .cs-row.is-new, .cs-row.is-new *, .cs-note.is-new { font-style: italic !important; color: #8a8a8a !important; }
   .cs-checkline.is-new .cs-box { color: #b0b0b0 !important; }
   .cs-checkline.is-new::after { content: " \00b7 added"; font-size: 9px; font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: #b0b0b0; vertical-align: 1px; }
-  .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
+  .cs-checkline { display: flex; gap: 8px; padding: 2px 0; font-size: 14px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
   /* ---- login ---- */
@@ -465,7 +465,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.52";
+  var APP_VERSION = "Pioneer Farms v1.0.53";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
