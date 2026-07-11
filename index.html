@@ -29,13 +29,42 @@
     --paper:#f5f6f8; --card:#ffffff; --ink:#1c2430; --deep:#22304a;
     --rule:#d6dae1; --muted:#6b7688; --faint:#9aa3b2;
     --accent:#3f6f6f; --accent-soft:#e6efee; --confirmed:#2f7d54; --confirmed-soft:#e7f1ec;
+    --input-bg:#ffffff; --panel:#fbfcfd; --btn-fg:#ffffff;
+    --past-bg:#eceef1; --private-bg:#f0e9ef; --private-fg:#7a4f74; --err:#a3453a;
     --shadow:0 1px 3px rgba(28,36,48,.08), 0 1px 2px rgba(28,36,48,.04);
     --serif:'Spectral', Georgia, serif;
     --sans:-apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
     --mono:ui-monospace, "SF Mono", Menlo, monospace;
   }
+  /* Dark mode: recolors the APP chrome only. The printed/shared document
+     sheets (.doc / .cs-*) stay light — they're white paper. Follows the system
+     setting; a manual override sets data-theme on <html>. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#12151a; --card:#1b2028; --ink:#e6e9ee; --deep:#c9d4e6;
+      --rule:#2c333e; --muted:#98a2b3; --faint:#6b7480;
+      --accent:#6fa39a; --accent-soft:#1e2b2a; --confirmed:#5cb583; --confirmed-soft:#16261d;
+      --input-bg:#12151a; --panel:#20262f; --btn-fg:#0f1216;
+      --past-bg:#232a33; --private-bg:#2a222c; --private-fg:#c99ec6; --err:#e08a80;
+      --shadow:0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#12151a; --card:#1b2028; --ink:#e6e9ee; --deep:#c9d4e6;
+    --rule:#2c333e; --muted:#98a2b3; --faint:#6b7480;
+    --accent:#6fa39a; --accent-soft:#1e2b2a; --confirmed:#5cb583; --confirmed-soft:#16261d;
+    --input-bg:#12151a; --panel:#20262f; --btn-fg:#0f1216;
+    --past-bg:#232a33; --private-bg:#2a222c; --private-fg:#c99ec6; --err:#e08a80;
+    --shadow:0 1px 3px rgba(0,0,0,.4), 0 1px 2px rgba(0,0,0,.3);
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin:0; padding:0; }
+  /* Document sheets (.doc / .cs) are white paper in every theme so they match
+     the shared PDF. Pin their vars to light values regardless of dark mode. */
+  .doc, .cs {
+    --ink:#1c2430; --deep:#22304a; --muted:#6b7688; --faint:#9aa3b2;
+    --accent:#3f6f6f; --rule:#d6dae1; --card:#ffffff;
+  }
   body {
     background: var(--paper); color: var(--ink); font-family: var(--sans);
     font-size: 16px; line-height: 1.5;
@@ -48,7 +77,7 @@
   .top .sub { font-family: var(--mono); font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); margin-top: 5px; }
 
   button { font-family: var(--sans); cursor: pointer; }
-  .btn { background: var(--deep); color: #fff; border: none; border-radius: 9px; padding: 12px 18px; font-size: 15px; font-weight: 600; }
+  .btn { background: var(--deep); color: var(--btn-fg); border: none; border-radius: 9px; padding: 12px 18px; font-size: 15px; font-weight: 600; }
   .btn:active { opacity: .9; }
   .btn-ghost { background: transparent; color: var(--accent); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 16px; font-size: 14px; font-weight: 500; }
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -61,7 +90,7 @@
   .week-date { font-family: var(--serif); font-size: 18px; font-weight: 600; color: var(--deep); }
   .week-meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .week-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
-  .week-tag.past { background: #eceef1; color: var(--faint); }
+  .week-tag.past { background: var(--past-bg); color: var(--faint); }
   .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-family: var(--serif); font-style: italic; font-size: 17px; }
 
   /* archive */
@@ -81,7 +110,7 @@
   .zone-head .who { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); }
   .zone-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; }
   .badge-public { background: var(--accent-soft); color: var(--accent); }
-  .badge-private { background: #f0e9ef; color: #7a4f74; }
+  .badge-private { background: var(--private-bg); color: var(--private-fg); }
   .sub-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-top: 12px; border-top: 1px dashed var(--rule); }
   .bm-chip { display: inline-block; margin-top: 5px; font-family: var(--sans); font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
   .bm-chip::before { content: "\2192 "; opacity: .6; }
@@ -89,7 +118,7 @@
   .sent-bar.is-sent { border-style: solid; border-color: var(--confirmed); background: var(--confirmed-soft); color: var(--confirmed); }
   .sent-bar .sent-txt { flex: 1; }
   .sent-bar .sent-dot { font-weight: 800; }
-  .sent-bar .sent-mark { background: var(--deep); color: #fff; border: none; border-radius: 7px; padding: 7px 13px; font-size: 13px; font-weight: 600; }
+  .sent-bar .sent-mark { background: var(--deep); color: var(--btn-fg); border: none; border-radius: 7px; padding: 7px 13px; font-size: 13px; font-weight: 600; }
   .sent-bar .sent-undo { background: transparent; border: none; color: var(--confirmed); font-size: 12px; text-decoration: underline; }
   .week-tag.sent-tag { background: var(--confirmed-soft); color: var(--confirmed); }
 
@@ -98,21 +127,21 @@
   .field label { display: block; font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; }
   .field input, .field textarea, .field select {
     width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
-    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: #fff; color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; background: var(--input-bg); color: var(--ink);
     -webkit-appearance: none; appearance: none;
   }
   .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .field textarea { resize: vertical; min-height: 62px; line-height: 1.45; }
   .field .hint { font-size: 12px; color: var(--faint); margin-top: 4px; font-style: italic; }
 
-  .speaker-row { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfd; }
+  .speaker-row { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel); }
   .speaker-row .sp-name { margin-bottom: 8px; }
   .sp-topic label { color: var(--accent); }
 
   /* toggle switch (Fast & Testimony) */
   .toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer; user-select: none; }
   .toggle .tg-track { position: relative; width: 44px; height: 26px; border-radius: 999px; background: var(--rule); transition: background .18s; flex: 0 0 auto; }
-  .toggle .tg-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .18s; }
+  .toggle .tg-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .18s; }
   .toggle.on .tg-track { background: var(--accent); }
   .toggle.on .tg-knob { transform: translateX(18px); }
   .toggle .tg-label { font-size: 14.5px; font-weight: 600; color: var(--ink); }
@@ -131,7 +160,7 @@
   .hymn-trigger {
     width: 100%; box-sizing: border-box; text-align: left; font-family: var(--sans);
     font-size: 16px; border: 1px solid var(--rule); border-radius: 8px;
-    padding: 10px 12px; background: #fff; color: var(--ink); cursor: pointer;
+    padding: 10px 12px; background: var(--input-bg); color: var(--ink); cursor: pointer;
     display: flex; align-items: center; gap: 8px; min-height: 42px;
   }
   .hymn-trigger:active { border-color: var(--accent); }
@@ -151,7 +180,7 @@
   .hp-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--deep); margin-bottom: 10px; text-align: center; }
   .hp-search {
     width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
-    border: 1px solid var(--rule); border-radius: 9px; padding: 11px 13px; background: #fff; color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 9px; padding: 11px 13px; background: var(--input-bg); color: var(--ink);
     -webkit-appearance: none; appearance: none;
   }
   .hp-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -169,7 +198,7 @@
   /* output */
   .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
   .sheet-overlay.open { display: block; }
-  .sheet-toolbar { position: sticky; top: 0; background: #fff; border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
+  .sheet-toolbar { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
   .sheet-toolbar .btn { padding: 9px 16px; }
   .sheet-toolbar .close { background: transparent; border: none; color: var(--muted); font-size: 15px; flex: 1; text-align: left; padding: 0; }
   .sheet-scroll { padding: 22px 16px 60px; }
@@ -201,6 +230,25 @@
   .doc-line.stacked .dl-val { display: block; margin-top: 2px; padding-left: 2px; }
   .doc-section-title { font-family: var(--mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin: 20px 0 8px; font-weight: 600; }
   .doc-note { font-size: 13px; color: var(--muted); font-style: italic; }
+
+  /* ---- formal sacrament program (matches the shared PDF exactly) ---- */
+  .pg { color: #1b2a3a; }
+  .pg-rule { border: none; border-top: 2px solid #1b2a3a; margin: 0; }
+  .pg-rule-top { margin-bottom: 20px; }
+  .pg-rule-head { margin-top: 14px; }
+  .pg-rule-bottom { margin-top: 22px; }
+  .pg-eyebrow { text-align: center; font-family: var(--sans); font-size: 10.5px; font-weight: 600;
+    letter-spacing: .22em; text-transform: uppercase; color: #6b7683; margin-bottom: 12px; }
+  .pg-title { text-align: center; font-family: var(--serif); font-size: 34px; font-weight: 600;
+    color: #1b2a3a; line-height: 1.05; margin: 0; }
+  .pg-ward { text-align: center; font-family: var(--serif); font-style: italic; font-size: 18px;
+    color: #1b2a3a; margin: 6px 0 0; }
+  .pg-date { text-align: center; font-family: var(--sans); font-size: 12.5px; color: #6b7683; margin: 7px 0 0; }
+  .pg-body { margin-top: 26px; }
+  .pg-row { display: flex; align-items: baseline; gap: 8px; margin: 0 0 17px; }
+  .pg-label { font-family: var(--sans); font-weight: 700; font-size: 14px; color: #1b2a3a; white-space: nowrap; }
+  .pg-dots { flex: 1; border-bottom: 1px dotted #c9ced4; transform: translateY(-3px); min-width: 24px; }
+  .pg-val { font-family: var(--serif); font-size: 15px; color: #1b2a3a; white-space: nowrap; text-align: right; }
 
   /* ---- conducting sheet ---- */
   .cs { max-width: 680px; margin: 0 auto; }
@@ -247,7 +295,7 @@
   .login-card label:first-child { margin-top: 0; }
   .login-card input { width: 100%; box-sizing: border-box; font-size: 16px; border: 1px solid var(--rule); border-radius: 8px; padding: 11px 12px; -webkit-appearance: none; }
   .login-card input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .login-btn { width: 100%; margin-top: 18px; background: var(--deep); color: #fff; border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
+  .login-btn { width: 100%; margin-top: 18px; background: var(--deep); color: var(--btn-fg); border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
   .login-msg { font-size: 13px; margin-top: 14px; text-align: center; min-height: 18px; }
   .login-msg.err { color: #a3453a; }
   .login-msg.ok { color: var(--confirmed); }
@@ -262,7 +310,7 @@
   .signout-link { display: block; text-align: center; margin: 20px auto 0; background: none; border: none; color: var(--faint); font-size: 12.5px; }
 
   /* ---- tab bar ---- */
-  .tabs { display: flex; gap: 4px; max-width: 620px; margin: 0 auto 18px; padding: 4px; background: #eceef1; border-radius: 11px; }
+  .tabs { display: flex; gap: 4px; max-width: 620px; margin: 0 auto 18px; padding: 4px; background: var(--past-bg); border-radius: 11px; }
   .tabs .tab { flex: 1; text-align: center; font-family: var(--sans); font-size: 13.5px; font-weight: 600; padding: 9px 6px; border-radius: 8px; border: none; background: transparent; color: var(--muted); }
   .tabs .tab.active { background: #fff; color: var(--deep); box-shadow: var(--shadow); }
 
@@ -408,7 +456,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.39";
+  var APP_VERSION = "Pioneer Farms v1.0.40";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2378,24 +2426,42 @@
 
   function buildProgram(w) {
     var doc = document.createDocumentFragment();
-    doc.appendChild(el("h1", null, "Sacrament Meeting"));
-    doc.appendChild(el("p", "doc-ward", WARD));
-    doc.appendChild(el("div", "doc-date", fmtDate(w.date)));
-    var add = function (n) { if (n) doc.appendChild(n); };
-    add(docLine("Conducting", w.conducting));
-    add(docLine("Opening Hymn", hymnClean(w.openingHymn)));
-    add(docLine("Invocation", w.invocation));
-    add(docLine("Sacrament Hymn", hymnClean(w.sacramentHymn)));
-    if (w.testimony) {
-      add(docLine("Program", "Testimony Meeting"));
-    } else {
-      if (w.youthSpeaker) add(docLine("Youth Speaker", w.youthSpeaker));
-      (w.speakers || []).forEach(function (sp, i) { if (sp.name) add(docLine("Speaker " + (i + 1), sp.name)); });
+    var prog = el("div", "pg");
+    doc.appendChild(prog);
+
+    prog.appendChild(el("hr", "pg-rule pg-rule-top"));
+    prog.appendChild(el("div", "pg-eyebrow", "The Church of Jesus Christ of Latter-day Saints"));
+    prog.appendChild(el("div", "pg-title", "Sacrament Meeting"));
+    prog.appendChild(el("div", "pg-ward", WARD));
+    prog.appendChild(el("div", "pg-date", fmtDate(w.date)));
+    prog.appendChild(el("hr", "pg-rule pg-rule-head"));
+
+    var body = el("div", "pg-body");
+    prog.appendChild(body);
+    function row(label, val) {
+      if (!val) return;
+      var r = el("div", "pg-row");
+      r.appendChild(el("span", "pg-label", label));
+      r.appendChild(el("span", "pg-dots"));
+      r.appendChild(el("span", "pg-val", val));
+      body.appendChild(r);
     }
-    add(docLine("Rest Hymn", hymnClean(w.restHymn)));
-    add(docLine("Musical Number", w.musical));
-    add(docLine("Closing Hymn", hymnClean(w.closingHymn)));
-    add(docLine("Benediction", w.benediction));
+    row("Conducting", w.conducting);
+    row("Opening Hymn", hymnClean(w.openingHymn));
+    row("Invocation", w.invocation);
+    row("Sacrament Hymn", hymnClean(w.sacramentHymn));
+    if (w.testimony) {
+      row("Program", "Testimony Meeting");
+    } else {
+      row("Youth Speaker", w.youthSpeaker);
+      (w.speakers || []).forEach(function (sp, i) { if (sp.name) row("Speaker " + (i + 1), sp.name); });
+    }
+    row("Rest Hymn", hymnClean(w.restHymn));
+    row("Musical Number", w.musical);
+    row("Closing Hymn", hymnClean(w.closingHymn));
+    row("Benediction", w.benediction);
+
+    prog.appendChild(el("hr", "pg-rule pg-rule-bottom"));
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
   // Strip a trailing tune/voicing tag like "(AABERG)" or "(men)" from a hymn
@@ -2730,91 +2796,12 @@
       setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
     }
   }
-  function programPdfName(w) {
-    return ("Sacrament Meeting " + fmtShort(w.date)).replace(/[^\w \-]/g, "").replace(/\s+/g, "_") + ".pdf";
-  }
-
-  // Draw the sacrament program as real text (the "Option C" formal layout):
-  // church-name eyebrow, serif title, ward, date, framed dotted-leader rows.
-  function drawProgramPdf(pdf, w) {
-    var PW = pdf.internal.pageSize.getWidth();
-    var cx = PW / 2;
-    var left = 79, right = PW - 79;      // ~1.1in
-    var INK = "#1b2a3a", MUT = "#6b7683", RULE = "#c9ced4";
-
-    var rows = [];
-    function add(label, val) { if (val) rows.push([label, val]); }
-    add("Conducting", w.conducting);
-    add("Opening Hymn", hymnClean(w.openingHymn));
-    add("Invocation", w.invocation);
-    add("Sacrament Hymn", hymnClean(w.sacramentHymn));
-    if (w.testimony) {
-      add("Program", "Testimony Meeting");
-    } else {
-      add("Youth Speaker", w.youthSpeaker);
-      (w.speakers || []).forEach(function (sp, i) { if (sp.name) add("Speaker " + (i + 1), sp.name); });
-    }
-    add("Rest Hymn", hymnClean(w.restHymn));
-    add("Musical Number", w.musical);
-    add("Closing Hymn", hymnClean(w.closingHymn));
-    add("Benediction", w.benediction);
-
-    pdf.setDrawColor(INK); pdf.setLineWidth(2);
-    pdf.line(left, 61, right, 61);
-
-    var y = 85;
-    pdf.setTextColor(MUT); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
-    pdf.text("THE CHURCH OF JESUS CHRIST OF LATTER-DAY SAINTS", cx, y, { align: "center", charSpace: 1.6 });
-    y += 30;
-    pdf.setTextColor(INK); pdf.setFont("times", "bold"); pdf.setFontSize(26);
-    pdf.text("Sacrament Meeting", cx, y, { align: "center" });
-    y += 22;
-    pdf.setFont("times", "italic"); pdf.setFontSize(14);
-    pdf.text(WARD, cx, y, { align: "center" });
-    y += 17;
-    pdf.setTextColor(MUT); pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
-    pdf.text(fmtDate(w.date), cx, y, { align: "center" });
-    y += 13;
-    pdf.setDrawColor(INK); pdf.setLineWidth(2);
-    pdf.line(left, y, right, y);
-
-    y += 34;
-    var lx = 101, vx = PW - 101; // ~1.4in
-    rows.forEach(function (r) {
-      var lab = r[0], val = r[1];
-      pdf.setTextColor(INK); pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
-      pdf.text(lab, lx, y);
-      var lw = pdf.getTextWidth(lab);
-      pdf.setFont("times", "normal"); pdf.setFontSize(12.5);
-      pdf.text(val, vx, y, { align: "right" });
-      var rw = pdf.getTextWidth(val);
-      pdf.setDrawColor(RULE); pdf.setLineWidth(0.4);
-      pdf.setLineDashPattern([1, 3], 0);
-      pdf.line(lx + lw + 6, y - 3, vx - rw - 6, y - 3);
-      pdf.setLineDashPattern([], 0);
-      y += 27;
-    });
-
-    pdf.setDrawColor(INK); pdf.setLineWidth(2);
-    pdf.line(left, y - 4, right, y - 4);
-  }
-
   async function exportSheetPdf() {
     if (!window.jspdf || !window.html2canvas) { alert("PDF tools still loading \u2014 try again in a second."); return; }
     var btn = document.getElementById("sheetPdf");
     var label = btn.textContent; btn.textContent = "Building\u2026"; btn.disabled = true;
     try {
       var jsPDF = window.jspdf.jsPDF;
-
-      // The sacrament program is drawn as real, crisp text (not a screenshot),
-      // so it looks like an actual printed program when sent to the ward.
-      if (currentSheet && currentSheet.type === "program" && currentSheet.data) {
-        var ppdf = new jsPDF({ unit: "pt", format: "letter" });
-        drawProgramPdf(ppdf, currentSheet.data);
-        await deliverPdf(ppdf, programPdfName(currentSheet.data));
-        return;
-      }
-
       var pdf = new jsPDF({ unit: "pt", format: "letter" });
       var pw = pdf.internal.pageSize.getWidth();
       var ph = pdf.internal.pageSize.getHeight();
