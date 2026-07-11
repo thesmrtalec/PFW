@@ -456,7 +456,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.46";
+  var APP_VERSION = "Pioneer Farms v1.0.48";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -785,6 +785,7 @@
   // ---------- state ----------
   var state = { weeks: [], bishopric: [], assignments: [], council: [], councilAssignments: [] };
   var currentSheet = null; // { type, data } for the open output sheet; drives PDF export
+  var dataLoaded = false;  // becomes true only after a successful initial load; gates all saves
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
   var archiveOpen = { sacrament: false, bishopric: false };
 
@@ -850,6 +851,7 @@
       if (err) { pill("error", "load failed"); console.error(err.error); if (cb) cb(err.error); return; }
       var d = res.map(function (r) { return r.data || []; });
       hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10]);
+      dataLoaded = true; // load succeeded — saving is now safe
       pill("saved", "loaded");
       if (cb) cb(null);
     }).catch(function (e) { pill("error", "load failed"); console.error(e); if (cb) cb(e); });
@@ -919,6 +921,10 @@
 
   function pushAll(isRetry) {
     if (!sb || !currentUser) return;
+    // SAFETY: never save before the initial load has succeeded. Saving against
+    // empty/partial state is what lets pushChildren() delete real speaker and
+    // calling rows and replace them with nothing. No load = no save. Ever.
+    if (!dataLoaded) { console.warn("save blocked: data not loaded yet"); return; }
     var owner = currentUser.id;
     // Build upsert payloads. Local-only ids (non-uuid) are dropped so Postgres
     // generates real uuids; we then reload to pick them up.
@@ -2573,8 +2579,9 @@
 
     var relRows = (w.releases || []).filter(function (r) { return r.name || r.calling; });
     var calRows = (w.callings || []).filter(function (r) { return r.name || r.calling; });
+    var moveinNames = lines(w.moveins || "");
     var hasAnn = !!w.announcements;
-    var hasBiz = relRows.length || calRows.length;
+    var hasBiz = relRows.length || calRows.length || moveinNames.length;
 
     // ---- ANNOUNCEMENTS (spoken by conductor; not on program) ----
     if (hasAnn) {
@@ -2590,6 +2597,17 @@
     // ---- WARD BUSINESS (verbatim votes; conductor only) ----
     if (hasBiz) {
       var sBiz = csSection(cs, "Ward Business");
+      if (moveinNames.length) {
+        sBiz.appendChild(csSay("Records received", function (box) {
+          box.appendChild(el("div", "cs-quote", "\u201cWe\u2019ve received the following member records and would like to welcome them to the ward:\u201d"));
+          moveinNames.forEach(function (n) {
+            var line = el("div", "cs-checkline");
+            line.appendChild(el("span", "cs-box", "\u25a1"));
+            line.appendChild(el("span", "cs-names", n));
+            box.appendChild(line);
+          });
+        }));
+      }
       if (relRows.length) {
         sBiz.appendChild(csSay("Releases", function (box) {
           box.appendChild(el("div", "cs-quote", "\u201cThe following members have been released:\u201d"));
@@ -2627,19 +2645,6 @@
         line.appendChild(el("span", null, l));
         sBl.appendChild(line);
       });
-    }
-
-    // ---- MOVE-IN RECORDS (welcome from the stand) ----
-    if (w.moveins) {
-      var names = lines(w.moveins);
-      var sMI = csSection(cs, "Move-in Records");
-      sMI.appendChild(csSay("Welcome from the stand", function (box) {
-        var joined = names.length === 1 ? names[0]
-          : names.slice(0, -1).join(", ") + (names.length > 1 ? " and " + names[names.length - 1] : "");
-        box.appendChild(el("div", "cs-quote",
-          "\u201cWe\u2019ve received the following records and would like to welcome " + joined +
-          " to the " + WARD + ".\u201d"));
-      }));
     }
 
     // ---- TESTIMONY MEETING (conductor cue; not a program item) ----
