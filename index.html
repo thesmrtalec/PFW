@@ -273,6 +273,8 @@
   .cs-say { border-left: 3px solid #111; background: #f6f7f9; padding: 8px 12px; margin: 7px 0; font-size: 14.5px; line-height: 1.5; }
   .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
   .cs-say .cs-names { font-weight: 700; color: #111; }
+  .cs-namegrid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 0; }
+  .cs-namegrid.one-col { grid-template-columns: 1fr; }
   .cs-say .cs-quote { color: #1c2430; }
   .cs-say .cs-quote + .cs-checkline { margin-top: 5px; }
   .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
@@ -456,7 +458,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.48";
+  var APP_VERSION = "Pioneer Farms v1.0.49";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1500,7 +1502,7 @@
     // ===== Move-in records (conducting cue) =====
     var zMI = el("div", "zone");
     zoneHead(zMI, "Move-in records", null, "conducting", "badge-private");
-    bindText(zMI, "moveins", { label: "new records received", hint: "names of members whose records arrived \u2014 read as a welcome from the stand; prints on the conducting sheet" });
+    bindText(zMI, "moveins", { label: "new records received", hint: "one person or household per line \u2014 e.g. \u201cBen, Charisa, Amelia & Lovissa Jensen\u201d. Read as a welcome; prints on the conducting sheet" });
     app.appendChild(zMI);
 
     // ===== Ward business (private) =====
@@ -2565,6 +2567,32 @@
     buildInner(box);
     return box;
   }
+  // Render a checkbox list of names into a grid: single column for short lists,
+  // two columns once there are 4+ (uses the empty right-hand space). The box
+  // on each line keeps reading order unambiguous. Fills column-first (down the
+  // left, then down the right).
+  function nameGrid(host, items, labelOf) {
+    var twoCol = items.length >= 3;
+    var grid = el("div", "cs-namegrid" + (twoCol ? "" : " one-col"));
+    // column-first order: reorder so CSS's row-major grid reads top-to-bottom
+    // per column. Split into halves and interleave.
+    var ordered = items;
+    if (twoCol) {
+      var half = Math.ceil(items.length / 2);
+      ordered = [];
+      for (var i = 0; i < half; i++) {
+        ordered.push(items[i]);
+        if (i + half < items.length) ordered.push(items[i + half]);
+      }
+    }
+    ordered.forEach(function (it) {
+      var line = el("div", "cs-checkline");
+      line.appendChild(el("span", "cs-box", "\u25a1"));
+      line.appendChild(el("span", "cs-names", labelOf(it)));
+      grid.appendChild(line);
+    });
+    host.appendChild(grid);
+  }
 
   function buildScript(w) {
     var doc = document.createDocumentFragment();
@@ -2600,37 +2628,20 @@
       if (moveinNames.length) {
         sBiz.appendChild(csSay("Records received", function (box) {
           box.appendChild(el("div", "cs-quote", "\u201cWe\u2019ve received the following member records and would like to welcome them to the ward:\u201d"));
-          moveinNames.forEach(function (n) {
-            var line = el("div", "cs-checkline");
-            line.appendChild(el("span", "cs-box", "\u25a1"));
-            line.appendChild(el("span", "cs-names", n));
-            box.appendChild(line);
-          });
+          nameGrid(box, moveinNames, function (n) { return n; });
         }));
       }
       if (relRows.length) {
         sBiz.appendChild(csSay("Releases", function (box) {
           box.appendChild(el("div", "cs-quote", "\u201cThe following members have been released:\u201d"));
-          relRows.forEach(function (r) {
-            var line = el("div", "cs-checkline");
-            line.appendChild(el("span", "cs-box", "\u25a1"));
-            var label = r.calling ? (r.name + " \u2014 " + r.calling) : r.name;
-            line.appendChild(el("span", "cs-names", label));
-            box.appendChild(line);
-          });
+          nameGrid(box, relRows, function (r) { return r.calling ? (r.name + " \u2014 " + r.calling) : r.name; });
           box.appendChild(el("div", "cs-quote", "\u201cAll who can show a vote of thanks for their service, please manifest it.\u201d"));
         }));
       }
       if (calRows.length) {
         sBiz.appendChild(csSay("Sustainings", function (box) {
           box.appendChild(el("div", "cs-quote", "\u201cThe following members have accepted callings. Please stand if your name is said.\u201d"));
-          calRows.forEach(function (r) {
-            var line = el("div", "cs-checkline");
-            line.appendChild(el("span", "cs-box", "\u25a1"));
-            var label = r.calling ? (r.name + " \u2014 " + r.calling) : r.name;
-            line.appendChild(el("span", "cs-names", label));
-            box.appendChild(line);
-          });
+          nameGrid(box, calRows, function (r) { return r.calling ? (r.name + " \u2014 " + r.calling) : r.name; });
           box.appendChild(el("div", "cs-quote", "\u201cThose willing to sustain them please manifest it. Any opposed, by the same sign.\u201d"));
         }));
       }
