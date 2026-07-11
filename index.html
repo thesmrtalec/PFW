@@ -81,6 +81,8 @@
   .badge-public { background: var(--accent-soft); color: var(--accent); }
   .badge-private { background: #f0e9ef; color: #7a4f74; }
   .sub-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-top: 12px; border-top: 1px dashed var(--rule); }
+  .bm-chip { display: inline-block; margin-top: 5px; font-family: var(--sans); font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+  .bm-chip::before { content: "\2192 "; opacity: .6; }
 
   .field { margin-bottom: 12px; }
   .field:last-child { margin-bottom: 4px; }
@@ -374,7 +376,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.25";
+  var APP_VERSION = "Pioneer Farms v1.0.26";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -557,6 +559,64 @@
       refreshDatalists();
     });
   }
+
+  // Single best-match autocomplete (no datalist dropdown). Used for NAME fields,
+  // where the pool is large and a long dropdown is noise. Shows one ghosted
+  // completion; Tab/Enter/\u2192 or tapping the chip accepts it. Everything else
+  // (blur formatting, commit) matches autofill() so it's a drop-in for names.
+  function bestMatchAutofill(input, getPool, formatter, onCommit) {
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("autocorrect", "off");
+    input.setAttribute("autocapitalize", "words");
+
+    // wrap so we can float a suggestion chip under the field
+    var chip = el("div", "bm-chip"); chip.style.display = "none";
+    // insert chip right after the input in the DOM
+    if (input.parentNode) input.parentNode.insertBefore(chip, input.nextSibling);
+
+    var current = "";
+    function best(val) {
+      var v = (val || "").trim().toLowerCase();
+      if (!v) return "";
+      var pool = getPool();
+      // prefer prefix matches, then substring; shortest wins as "best"
+      var prefix = pool.filter(function (n) { return n.toLowerCase().indexOf(v) === 0; });
+      var sub    = pool.filter(function (n) { return n.toLowerCase().indexOf(v) > 0; });
+      var pick = (prefix[0] || sub[0] || "");
+      // don't suggest what's already fully typed
+      if (pick && pick.toLowerCase() === v) return "";
+      return pick;
+    }
+    function show() {
+      current = best(input.value);
+      if (current) { chip.textContent = current; chip.style.display = ""; }
+      else { chip.style.display = "none"; }
+    }
+    function accept() {
+      if (!current) return;
+      input.value = current; onCommit(current);
+      current = ""; chip.style.display = "none";
+    }
+    chip.onclick = accept;
+    input.addEventListener("input", show);
+    input.addEventListener("focus", show);
+    input.addEventListener("keydown", function (e) {
+      if ((e.key === "Tab" || e.key === "Enter" || e.key === "ArrowRight") && current) {
+        // ArrowRight only accepts when caret is at the end
+        if (e.key === "ArrowRight" && input.selectionStart !== input.value.length) return;
+        e.preventDefault(); accept();
+      }
+    });
+    input.addEventListener("blur", function () {
+      // small delay so a tap on the chip registers before it hides
+      setTimeout(function () { chip.style.display = "none"; }, 150);
+      var before = input.value;
+      var after = formatter(before);
+      if (after !== before) { input.value = after; onCommit(after); }
+      refreshDatalists();
+    });
+  }
+  function namePool() { return harvestSuggestions().names; }
 
   // ---------- hymn picker ----------
   function normalize(s){ return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
@@ -1262,7 +1322,7 @@
         ysf.appendChild(el("label", null, "youth speaker"));
         var ysi = el("input"); ysi.type = "text"; ysi.value = w.youthSpeaker || "";
         ysi.oninput = function () { w.youthSpeaker = ysi.value; save(); };
-        autofill(ysi, "dl-names", gentleName, function (v) { w.youthSpeaker = v; save(); });
+        bestMatchAutofill(ysi, namePool, gentleName, function (v) { w.youthSpeaker = v; save(); });
         ysf.appendChild(ysi); ys.appendChild(ysf);
         var ytf = el("div", "field sp-topic");
         ytf.appendChild(el("label", null, "topic"));
@@ -1285,7 +1345,7 @@
         nf.appendChild(el("label", null, "speaker " + (i + 1)));
         var ni = el("input"); ni.type = "text"; ni.value = sp.name || "";
         ni.oninput = function () { sp.name = ni.value; save(); };
-        autofill(ni, "dl-names", gentleName, function (v) { sp.name = v; save(); });
+        bestMatchAutofill(ni, namePool, gentleName, function (v) { sp.name = v; save(); });
         nf.appendChild(ni); row.appendChild(nf);
         var topf = el("div", "field sp-topic");
         topf.appendChild(el("label", null, "topic"));
@@ -1330,7 +1390,7 @@
         nf.appendChild(el("label", null, "name"));
         var ni = el("input"); ni.type = "text"; ni.value = r.name || "";
         ni.oninput = function () { r.name = ni.value; save(); };
-        autofill(ni, "dl-names", gentleName, function (v) { r.name = v; save(); });
+        bestMatchAutofill(ni, namePool, gentleName, function (v) { r.name = v; save(); });
         nf.appendChild(ni); row.appendChild(nf);
         var cf = el("div", "field"); cf.style.marginBottom = "0";
         cf.appendChild(el("label", null, opts.callingLabel));
@@ -1398,15 +1458,17 @@
     head.appendChild(addBtn);
     app.appendChild(head);
 
-    // open-assignments summary banner
+    // open-assignments summary banner (tap to see them all)
     var open = openAssignments();
     if (open.length) {
       var banner = el("div", "week-card");
-      banner.style.cssText = "cursor:default;border-color:var(--accent);background:var(--accent-soft);";
+      banner.style.cssText = "cursor:pointer;border-color:var(--accent);background:var(--accent-soft);";
       var bw = el("div", "week-when");
       bw.appendChild(el("div", "week-date", open.length + " open assignment" + (open.length === 1 ? "" : "s")));
-      bw.appendChild(el("div", "week-meta", "carried forward until closed"));
+      bw.appendChild(el("div", "week-meta", "tap to review \u00b7 carried until closed"));
       banner.appendChild(bw);
+      banner.appendChild(el("span", "week-tag", "review \u203a"));
+      banner.onclick = function () { openAssignmentsOverview("bishopric"); };
       app.appendChild(banner);
     }
 
@@ -1538,7 +1600,7 @@
       nf.appendChild(el("label", null, "name"));
       var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
       ni.oninput = function () { c.name = ni.value; save(); };
-      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
+      bestMatchAutofill(ni, namePool, gentleName, function (v) { c.name = v; save(); });
       nf.appendChild(ni); row.appendChild(nf);
       var notef = el("div", "field"); notef.style.marginBottom = "0";
       notef.appendChild(el("label", null, "note"));
@@ -1571,7 +1633,7 @@
       top.appendChild(el("label", null, "name"));
       var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
       ni.oninput = function () { c.name = ni.value; save(); };
-      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
+      bestMatchAutofill(ni, namePool, gentleName, function (v) { c.name = v; save(); });
       top.appendChild(ni); row.appendChild(top);
       var cf = el("div", "field"); cf.style.marginBottom = "6px";
       cf.appendChild(el("label", null, "calling / release"));
@@ -1775,11 +1837,13 @@
     var open = openCouncilAssignments();
     if (open.length) {
       var banner = el("div", "week-card");
-      banner.style.cssText = "cursor:default;border-color:var(--accent);background:var(--accent-soft);";
+      banner.style.cssText = "cursor:pointer;border-color:var(--accent);background:var(--accent-soft);";
       var bw = el("div", "week-when");
       bw.appendChild(el("div", "week-date", open.length + " open assignment" + (open.length === 1 ? "" : "s")));
-      bw.appendChild(el("div", "week-meta", "carried forward until closed"));
+      bw.appendChild(el("div", "week-meta", "tap to review \u00b7 carried until closed"));
       banner.appendChild(bw);
+      banner.appendChild(el("span", "week-tag", "review \u203a"));
+      banner.onclick = function () { openAssignmentsOverview("council"); };
       app.appendChild(banner);
     }
 
@@ -1914,7 +1978,7 @@
       nf.appendChild(el("label", null, "name"));
       var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
       ni.oninput = function () { c.name = ni.value; save(); };
-      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
+      bestMatchAutofill(ni, namePool, gentleName, function (v) { c.name = v; save(); });
       nf.appendChild(ni); row.appendChild(nf);
       var notef = el("div", "field"); notef.style.marginBottom = "0";
       notef.appendChild(el("label", null, "note"));
@@ -2278,6 +2342,59 @@
     host.appendChild(node);
     document.getElementById("sheetOverlay").classList.add("open");
     document.querySelector(".sheet-scroll").scrollTop = 0;
+  }
+
+  // Tappable overview of every open assignment in a pool ("bishopric" | "council").
+  // Opened from the running-count banner. Each row toggles done in place.
+  function openAssignmentsOverview(pool) {
+    var getOpen  = pool === "council" ? openCouncilAssignments   : openAssignments;
+    var toggleFn = pool === "council" ? toggleCouncilAssignment   : toggleAssignment;
+    var label    = pool === "council" ? "Ward Council"           : "Bishopric";
+
+    function build() {
+      var wrap = el("div");
+      wrap.appendChild(el("div", "cs-title", "Open Assignments"));
+      wrap.appendChild(el("div", "cs-sub", label + "  \u00b7  carried until done"));
+      wrap.appendChild(el("hr", "cs-hrule"));
+
+      var open = getOpen();
+      if (!open.length) {
+        wrap.appendChild(el("div", "cs-note", "Nothing open. Clean slate."));
+        return wrap;
+      }
+      // group by person, Unassigned last
+      var byPerson = {}, order = [];
+      open.forEach(function (a) {
+        var key = a.who && a.who.trim() ? a.who.trim() : "Unassigned";
+        if (!byPerson[key]) { byPerson[key] = []; order.push(key); }
+        byPerson[key].push(a);
+      });
+      order.sort(function (a, b) { if (a === "Unassigned") return 1; if (b === "Unassigned") return -1; return a.localeCompare(b); });
+
+      order.forEach(function (name) {
+        var block = el("div", "fu-person");
+        block.appendChild(el("div", "fu-name", name));
+        byPerson[name].forEach(function (a) {
+          var row = el("div", "asg");
+          var chk = el("div", "asg-check", "");
+          chk.onclick = function () {
+            toggleFn(a.id);
+            // rebuild the overlay in place so it reflects the new count
+            var host = document.getElementById("sheetDoc");
+            host.innerHTML = ""; host.appendChild(build());
+          };
+          row.appendChild(chk);
+          var body = el("div", "asg-body");
+          body.appendChild(el("div", "asg-what", a.what || "(no description)"));
+          body.appendChild(el("div", "asg-meta", "since " + fmtShort(a.dateMade)));
+          row.appendChild(body);
+          block.appendChild(row);
+        });
+        wrap.appendChild(block);
+      });
+      return wrap;
+    }
+    openSheet(build());
   }
 
   // two documents in a horizontal swipe view; prints as two separate pages
