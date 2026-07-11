@@ -278,6 +278,7 @@
   .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
   .cs-mission-h { font-family: var(--sans); font-size: 12px; font-weight: 700; color: #1c2430; margin: 8px 0 3px; }
+  .cs-thought { font-family: var(--serif); font-style: italic; font-size: 14.5px; line-height: 1.5; color: #33404f; text-align: center; margin: 14px auto 4px; max-width: 84%; }
   .cs-caption { font-family: var(--sans); font-size: 10.5px; font-style: italic; letter-spacing: .02em; color: #999; margin: -2px 0 5px; }
   /* lines added after the agenda was locked ("sent") \u2014 flagged on reprint */
   .cs-checkline.is-new, .cs-checkline.is-new *, .cs-row.is-new, .cs-row.is-new *, .cs-note.is-new { font-style: italic !important; color: #8a8a8a !important; }
@@ -455,7 +456,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.44";
+  var APP_VERSION = "Pioneer Farms v1.0.45";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -877,7 +878,7 @@
 
     state.bishopric = (bm || []).map(function (m) {
       return {
-        id: m.id, date: m.meeting_date, moveins: m.moveins || "", ministering: m.ministering || "",
+        id: m.id, date: m.meeting_date, thought: m.thought || "", moveins: m.moveins || "", ministering: m.ministering || "",
         ordinances: m.ordinances || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
         lockSnapshot: m.lock_snapshot || null,
         counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
@@ -937,7 +938,7 @@
       return r;
     });
     var bmRows = state.bishopric.map(function (m) {
-      var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, ministering: m.ministering,
+      var r = { owner: owner, meeting_date: m.date, thought: m.thought, moveins: m.moveins, ministering: m.ministering,
                 ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
@@ -1069,6 +1070,7 @@
     return {
       id: uid(),
       date: nextSundayISO(),
+      thought: "",
       moveins: "",
       counsel: [],        // [{id, name, note}]
       ministering: "",
@@ -1660,6 +1662,12 @@
     df.appendChild(dinput); z0.appendChild(df);
     app.appendChild(z0);
 
+    // ===== SPIRITUAL THOUGHT (prints at the very top of the agenda) =====
+    var zT = el("div", "zone");
+    zoneHead(zT, "Spiritual thought", "opens the agenda");
+    textField(zT, function () { return m.thought; }, function (v) { m.thought = v; }, { area: true, rows: 2, hint: "a scripture, quote, or question to center on \u2014 prints at the top, above everything" });
+    app.appendChild(zT);
+
     // ===== OPEN ASSIGNMENTS (the engine) =====
     var zA = el("div", "zone");
     zoneHead(zA, "Assignments", "carried until done");
@@ -1822,10 +1830,17 @@
     cs.appendChild(el("div", "cs-sub", WARD));
     cs.appendChild(el("div", "cs-date", fmtDate(m.date)));
 
+    // spiritual thought \u2014 opens the agenda, no label, above everything
+    if (m.thought) {
+      var th = el("div", "cs-thought");
+      lines(m.thought).forEach(function (l) { th.appendChild(el("div", null, l)); });
+      cs.appendChild(th);
+    }
+
     // open assignments first
     var open = assignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
     var sA = el("div", "cs-sec");
-    sA.appendChild(el("div", "cs-h", "Open Assignments \u2014 Follow Up"));
+    sA.appendChild(el("div", "cs-h", "Open Assignments"));
     sA.appendChild(el("hr", "cs-hrule"));
     if (!open.length) {
       sA.appendChild(el("div", "cs-note", "None open. Clean slate."));
@@ -2217,7 +2232,7 @@
     // open assignments first
     var open = councilAssignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
     var sA = el("div", "cs-sec");
-    sA.appendChild(el("div", "cs-h", "Open Assignments \u2014 Follow Up"));
+    sA.appendChild(el("div", "cs-h", "Open Assignments"));
     sA.appendChild(el("hr", "cs-hrule"));
     if (!open.length) {
       sA.appendChild(el("div", "cs-note", "None open. Clean slate."));
