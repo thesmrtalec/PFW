@@ -408,7 +408,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.34";
+  var APP_VERSION = "Pioneer Farms v1.0.35";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1408,10 +1408,10 @@
     app.appendChild(zM);
     app.appendChild(zP);
 
-    // ===== Ordinances (public if present) =====
+    // ===== Ordinances (conducting cue) =====
     var zO = el("div", "zone");
-    zoneHead(zO, "Ordinances", null, "goes to ward", "badge-public");
-    bindText(zO, "blessings", { label: "blessings & confirmations", hint: "leave blank if none - only prints if filled" });
+    zoneHead(zO, "Ordinances", null, "conducting", "badge-private");
+    bindText(zO, "blessings", { label: "blessings & confirmations", hint: "baptisms, confirmations, ordinations \u2014 announced from the stand; prints on the conducting sheet" });
     app.appendChild(zO);
 
     // ===== Ward business (private) =====
@@ -2384,7 +2384,6 @@
     add(docLine("Conducting", w.conducting));
     add(docLine("Opening Hymn", w.openingHymn));
     add(docLine("Invocation", w.invocation));
-    add(docLine("Blessings & Confirmations", w.blessings));
     add(docLine("Sacrament Hymn", w.sacramentHymn));
     if (w.testimony) {
       add(docLine("Program", "Testimony Meeting"));
@@ -2481,6 +2480,17 @@
           box.appendChild(el("div", "cs-quote", "\u201cThose willing to sustain them please manifest it. Any opposed, by the same sign.\u201d"));
         }));
       }
+    }
+
+    // ---- BLESSINGS / CONFIRMATIONS / ORDINATIONS (conductor announces) ----
+    if (w.blessings) {
+      var sBl = csSection(cs, "Blessings & Confirmations");
+      lines(w.blessings).forEach(function (l) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        line.appendChild(el("span", null, l));
+        sBl.appendChild(line);
+      });
     }
 
     // ---- TESTIMONY MEETING (conductor cue; not a program item) ----
