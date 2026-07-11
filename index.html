@@ -197,6 +197,31 @@
 
   /* output */
   .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
+
+  /* ---- Cue cards (live conducting) ---- */
+  .cue-overlay { position: fixed; inset: 0; background: #12151a; z-index: 200; display: none; flex-direction: column;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .cue-overlay.open { display: flex; }
+  .cue-topbar { display: flex; align-items: center; gap: 12px; padding: 14px 18px 6px; position: relative; z-index: 3; }
+  .cue-close { background: rgba(255,255,255,.1); border: none; color: #cdd3dc; font-size: 15px; padding: 8px 14px; border-radius: 999px; }
+  .cue-progress { flex: 1; display: flex; gap: 5px; justify-content: center; }
+  .cue-dot { width: 7px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.22); transition: background .2s, width .2s; }
+  .cue-dot.active { background: #8fb0a8; width: 20px; }
+  .cue-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 28px 28px; position: relative; z-index: 1; }
+  .cue-card { width: 100%; max-width: 620px; color: #f2f4f7; animation: cueIn .18s ease; }
+  @keyframes cueIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .cue-kicker { font-family: var(--mono); font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: #8fb0a8; margin-bottom: 18px; }
+  .cue-title { font-family: var(--serif); font-size: 34px; font-weight: 600; line-height: 1.1; margin-bottom: 20px; }
+  .cue-script { font-size: 23px; line-height: 1.45; color: #e6e9ee; margin-bottom: 22px; }
+  .cue-names { list-style: none; padding: 0; margin: 0; }
+  .cue-names li { font-size: 22px; font-weight: 600; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.08); display: flex; gap: 12px; align-items: baseline; }
+  .cue-names li .cue-box { color: #6f7a88; font-size: 18px; }
+  .cue-sub { font-size: 16px; color: #9aa3b2; margin-top: 4px; }
+  .cue-tap { position: absolute; top: 60px; bottom: 40px; width: 38%; z-index: 2; }
+  .cue-tap-left { left: 0; }
+  .cue-tap-right { right: 0; }
+  .cue-hint { text-align: center; font-size: 12px; color: #5f6875; padding: 0 0 14px; position: relative; z-index: 3; }
+  .cue-btn { display: block; width: 100%; max-width: 620px; margin: 10px auto 0; background: var(--accent); color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; }
   .sheet-overlay.open { display: block; }
   .sheet-toolbar { position: sticky; top: 0; background: var(--card); border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; gap: 10px; align-items: center; z-index: 2; }
   .sheet-toolbar .btn { padding: 9px 16px; }
@@ -442,6 +467,17 @@
   <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
 </div>
 
+<div class="cue-overlay" id="cueOverlay">
+  <div class="cue-topbar">
+    <button class="cue-close" id="cueClose">&times; done</button>
+    <div class="cue-progress" id="cueProgress"></div>
+  </div>
+  <div class="cue-stage" id="cueStage"></div>
+  <div class="cue-tap cue-tap-left" id="cueTapLeft"></div>
+  <div class="cue-tap cue-tap-right" id="cueTapRight"></div>
+  <div class="cue-hint" id="cueHint">tap right \u203a next \u00b7 \u2039 left back</div>
+</div>
+
 <div class="hp-overlay" id="hpOverlay">
   <div class="hp-panel">
     <div class="hp-head">
@@ -465,7 +501,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.53";
+  var APP_VERSION = "Pioneer Farms v1.0.54";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1585,6 +1621,10 @@
     b2.onclick = function () { currentSheet = { type: "conducting", data: w }; openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
+
+    var cueBtn = el("button", "btn cue-btn", "\u25B6 Cue Cards \u2014 conduct live");
+    cueBtn.onclick = function () { openCueCards(w); };
+    app.appendChild(cueBtn);
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -2717,6 +2757,136 @@
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
+
+  // ===== CUE CARDS (live conducting: one moment per full-screen card) =====
+  // Builds the full meeting arc, skipping moments with nothing to show.
+  function buildCueCards(w) {
+    var cards = [];
+    function hymnSpoken(v) {
+      var num = hymnNumFromValue(v);
+      var title = (v || "").replace(/^\s*\d+\s*[:\-\u2013\u2014]?\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+      return num ? ("#" + num + (title ? ", " + title : "")) : "";
+    }
+    var moveinNames = (w.moveinRows && w.moveinRows.length)
+      ? w.moveinRows.map(function (r) { return (r.household || "").trim(); }).filter(Boolean)
+      : lines(w.moveins || "");
+    var relRows = (w.releases || []).filter(function (r) { return r.name || r.calling; });
+    var calRows = (w.callings || []).filter(function (r) { return r.name || r.calling; });
+    var namedSpeakers = (w.speakers || []).filter(function (s) { return s.name; });
+
+    // 1. Welcome / opening
+    var openBits = [];
+    if (w.openingHymn) openBits.push("Opening hymn " + hymnSpoken(w.openingHymn));
+    if (w.invocation) openBits.push("Invocation: " + w.invocation);
+    cards.push({ kicker: "Welcome", title: "Good morning", script: "\u201cWelcome to sacrament meeting. We\u2019re glad you\u2019re here.\u201d", sub: openBits.join("  \u00b7  ") });
+
+    // 2. Announcements
+    if (w.announcements) {
+      cards.push({ kicker: "Announcements", title: "Announcements", names: lines(w.announcements) });
+    }
+
+    // 3. Move-ins
+    if (moveinNames.length) {
+      cards.push({ kicker: "Ward Business", title: "Records received",
+        script: "\u201cWe\u2019ve received the following member records and would like to welcome them to the ward:\u201d",
+        names: moveinNames });
+    }
+    // 4. Releases
+    if (relRows.length) {
+      cards.push({ kicker: "Ward Business", title: "Releases",
+        script: "\u201cThe following members have been released:\u201d",
+        names: relRows.map(function (r) { return r.calling ? (r.name + " \u2014 " + r.calling) : r.name; }),
+        after: "\u201cAll who can show a vote of thanks for their service, please manifest it.\u201d" });
+    }
+    // 5. Sustainings
+    if (calRows.length) {
+      cards.push({ kicker: "Ward Business", title: "Sustainings",
+        script: "\u201cThe following members have accepted callings. Please stand if your name is said.\u201d",
+        names: calRows.map(function (r) { return r.calling ? (r.name + " \u2014 " + r.calling) : r.name; }),
+        after: "\u201cThose willing to sustain them please manifest it. Any opposed, by the same sign.\u201d" });
+    }
+    // 6. Blessings / confirmations
+    if (w.blessings) {
+      cards.push({ kicker: "Ordinances", title: "Blessings & Confirmations", names: lines(w.blessings) });
+    }
+    // 7. Sacrament
+    if (w.showSacramentBlock !== false) {
+      var sp = hymnSpoken(w.sacramentHymn) || "___";
+      cards.push({ kicker: "Sacrament", title: "Sacrament",
+        script: "\u201cThe congregation will sing hymn " + sp + ", after which the Aaronic Priesthood will administer the sacrament.\u201d" });
+    }
+    // 8. Speakers / program
+    if (w.testimony) {
+      cards.push({ kicker: "Program", title: "Testimony Meeting",
+        script: "Bear testimony, then invite the congregation to share." });
+    } else {
+      var order = [];
+      if (w.youthSpeaker) order.push({ name: w.youthSpeaker });
+      namedSpeakers.forEach(function (s) { order.push({ name: s.name, topic: s.topic }); });
+      var restSp = hymnSpoken(w.restHymn);
+      if (order.length) {
+        cards.push({ kicker: "Program", title: "Speakers",
+          names: order.map(function (o) { return o.name + (o.topic ? "  \u2014  " + o.topic : ""); }),
+          sub: restSp ? ("Rest hymn " + restSp + " between speakers") : "" });
+      }
+      if (w.musical) cards.push({ kicker: "Program", title: "Musical number", script: w.musical });
+    }
+    // 9. Closing
+    var closeBits = [];
+    if (w.closingHymn) closeBits.push("Closing hymn " + hymnSpoken(w.closingHymn));
+    if (w.benediction) closeBits.push("Benediction: " + w.benediction);
+    if (closeBits.length) {
+      cards.push({ kicker: "Closing", title: "To close", names: closeBits });
+    }
+    return cards;
+  }
+
+  var cueState = { cards: [], i: 0 };
+  function renderCueCard() {
+    var stage = document.getElementById("cueStage");
+    var c = cueState.cards[cueState.i];
+    stage.innerHTML = "";
+    if (!c) return;
+    var card = el("div", "cue-card");
+    if (c.kicker) card.appendChild(el("div", "cue-kicker", c.kicker));
+    if (c.title) card.appendChild(el("div", "cue-title", c.title));
+    if (c.script) card.appendChild(el("div", "cue-script", c.script));
+    if (c.names && c.names.length) {
+      var ul = el("ul", "cue-names");
+      c.names.forEach(function (n) {
+        var li = el("li");
+        li.appendChild(el("span", "cue-box", "\u25a1"));
+        li.appendChild(el("span", null, n));
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
+    }
+    if (c.after) { var af = el("div", "cue-script"); af.style.marginTop = "22px"; af.textContent = c.after; card.appendChild(af); }
+    if (c.sub) card.appendChild(el("div", "cue-sub", c.sub));
+    stage.appendChild(card);
+    var prog = document.getElementById("cueProgress");
+    prog.innerHTML = "";
+    cueState.cards.forEach(function (_, idx) {
+      prog.appendChild(el("div", "cue-dot" + (idx === cueState.i ? " active" : "")));
+    });
+  }
+  function cueNext() { if (cueState.i < cueState.cards.length - 1) { cueState.i++; renderCueCard(); } }
+  function cuePrev() { if (cueState.i > 0) { cueState.i--; renderCueCard(); } }
+  function openCueCards(w) {
+    cueState.cards = buildCueCards(w);
+    cueState.i = 0;
+    renderCueCard();
+    document.getElementById("cueOverlay").classList.add("open");
+  }
+  document.getElementById("cueClose").onclick = function () { document.getElementById("cueOverlay").classList.remove("open"); };
+  document.getElementById("cueTapRight").onclick = cueNext;
+  document.getElementById("cueTapLeft").onclick = cuePrev;
+  document.addEventListener("keydown", function (e) {
+    if (!document.getElementById("cueOverlay").classList.contains("open")) return;
+    if (e.key === "ArrowRight") cueNext();
+    else if (e.key === "ArrowLeft") cuePrev();
+    else if (e.key === "Escape") document.getElementById("cueOverlay").classList.remove("open");
+  });
 
   function openSheet(node) {
     var host = document.getElementById("sheetDoc");
