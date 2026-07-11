@@ -246,9 +246,9 @@
   .pg-date { text-align: center; font-family: var(--sans); font-size: 12.5px; color: #6b7683; margin: 7px 0 0; }
   .pg-body { margin-top: 26px; }
   .pg-row { display: flex; align-items: baseline; gap: 8px; margin: 0 0 17px; }
-  .pg-label { font-family: var(--sans); font-weight: 700; font-size: 14px; color: #1b2a3a; white-space: nowrap; }
-  .pg-dots { flex: 1; border-bottom: 1px dotted #c9ced4; transform: translateY(-3px); min-width: 24px; }
-  .pg-val { font-family: var(--serif); font-size: 15px; color: #1b2a3a; white-space: nowrap; text-align: right; }
+  .pg-label { font-family: var(--sans); font-weight: 700; font-size: 14px; color: #1b2a3a; white-space: nowrap; flex: 0 0 auto; }
+  .pg-dots { flex: 1 1 20px; border-bottom: 1px dotted #c9ced4; transform: translateY(-3px); min-width: 12px; align-self: flex-end; margin-bottom: 5px; }
+  .pg-val { font-family: var(--serif); font-size: 15px; color: #1b2a3a; text-align: right; flex: 0 1 auto; min-width: 0; }
 
   /* ---- conducting sheet ---- */
   .cs { max-width: 680px; margin: 0 auto; }
@@ -427,8 +427,7 @@
 <div class="sheet-overlay" id="sheetOverlay">
   <div class="sheet-toolbar">
     <button class="close" id="sheetClose">&lsaquo; back</button>
-    <button class="btn secondary" id="sheetPdf">Share PDF</button>
-    <button class="btn" id="sheetPrint">Print / Save PDF</button>
+    <button class="btn" id="sheetPdf">Share PDF</button>
   </div>
   <div class="sheet-scroll"><div class="doc" id="sheetDoc"></div></div>
 </div>
@@ -456,7 +455,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.41";
+  var APP_VERSION = "Pioneer Farms v1.0.42";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2721,17 +2720,6 @@
     if (f) f.parentNode.removeChild(f);
     document.body.classList.remove("printing-flat");
   }
-  document.getElementById("sheetPrint").onclick = function () {
-    preparePrint();
-    // NOTE: on iOS Safari window.print() is async — the preview stays open and
-    // window.print() returns immediately. A short setTimeout cleanup would tear
-    // down #printFlat mid-preview, letting iOS re-paginate the live pair tree
-    // (and emit a phantom blank page). Clean up on afterprint; the long timeout
-    // is only a safety net for browsers that never fire afterprint, and is far
-    // longer than any real preview interaction.
-    window.print();
-    setTimeout(cleanupPrint, 60000);
-  };
   window.addEventListener("afterprint", cleanupPrint);
 
   // ---- Share as PDF (bypasses the browser print path, so no injected footer) ----
