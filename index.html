@@ -376,7 +376,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.26";
+  var APP_VERSION = "Pioneer Farms v1.0.27";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -797,7 +797,7 @@
 
     state.bishopric = (bm || []).map(function (m) {
       return {
-        id: m.id, date: m.meeting_date, ministering: m.ministering || "",
+        id: m.id, date: m.meeting_date, moveins: m.moveins || "", ministering: m.ministering || "",
         ordinances: m.ordinances || "", notes: m.notes || "",
         counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
         callings: kids(bk, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "", status: s.status || "consider" }; })
@@ -811,6 +811,7 @@
     state.council = (cm || []).map(function (m) {
       return {
         id: m.id, date: m.meeting_date,
+        moveins: m.moveins || "",
         instruction: m.instruction || "",
         live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
         coordination: m.coordination || "", notes: m.notes || "",
@@ -854,13 +855,13 @@
       return r;
     });
     var bmRows = state.bishopric.map(function (m) {
-      var r = { owner: owner, meeting_date: m.date, ministering: m.ministering,
+      var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, ministering: m.ministering,
                 ordinances: m.ordinances, notes: m.notes, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
     var cmRows = state.council.map(function (m) {
-      var r = { owner: owner, meeting_date: m.date, instruction: m.instruction,
+      var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, instruction: m.instruction,
                 live: m.live, care: m.care, invite: m.invite, unite: m.unite,
                 coordination: m.coordination, notes: m.notes, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
@@ -986,6 +987,7 @@
     return {
       id: uid(),
       date: nextSundayISO(),
+      moveins: "",
       counsel: [],        // [{id, name, note}]
       ministering: "",
       ordinances: "",
@@ -1028,6 +1030,7 @@
     return {
       id: uid(),
       date: nextSundayISO(),
+      moveins: "",         // new families / individuals into the ward
       instruction: "",     // bishop's focus / what to teach or center on
       counsel: [],         // [{id, name, note}] individuals & families
       live: "",            // Live the gospel
@@ -1590,6 +1593,12 @@
     zA.appendChild(addWrap);
     app.appendChild(zA);
 
+    // ===== MOVE-INS =====
+    var zMI = el("div", "zone");
+    zoneHead(zMI, "Move-ins");
+    textField(zMI, function () { return m.moveins; }, function (v) { m.moveins = v; }, { area: true, rows: 2, hint: "new members / families \u2014 records, ministering, calling to consider \u2014 one per line" });
+    app.appendChild(zMI);
+
     // ===== COUNSEL TOGETHER (people + ministering, one section) =====
     var zC = el("div", "zone");
     zoneHead(zC, "Counsel together", "who needs us");
@@ -1715,6 +1724,20 @@
       });
     }
     cs.appendChild(sA);
+
+    // move-ins
+    if (m.moveins) {
+      var sMI = el("div", "cs-sec");
+      sMI.appendChild(el("div", "cs-h", "Move-ins"));
+      sMI.appendChild(el("hr", "cs-hrule"));
+      lines(m.moveins).forEach(function (l) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        line.appendChild(el("span", null, l));
+        sMI.appendChild(line);
+      });
+      cs.appendChild(sMI);
+    }
 
     // counsel together
     if ((m.counsel || []).filter(function (c) { return c.name; }).length) {
@@ -1962,6 +1985,12 @@
     zA.appendChild(addWrap);
     app.appendChild(zA);
 
+    // ===== MOVE-INS =====
+    var zMI = el("div", "zone");
+    zoneHead(zMI, "Move-ins");
+    textField(zMI, function () { return m.moveins; }, function (v) { m.moveins = v; }, { area: true, rows: 2, hint: "new members / families \u2014 welcome, fold into auxiliaries \u2014 one per line" });
+    app.appendChild(zMI);
+
     // ===== INSTRUCTION / FOCUS =====
     var zI = el("div", "zone");
     zoneHead(zI, "Instruction & focus", "set the direction");
@@ -2069,6 +2098,20 @@
       });
     }
     cs.appendChild(sA);
+
+    // move-ins
+    if (m.moveins) {
+      var sMI = el("div", "cs-sec");
+      sMI.appendChild(el("div", "cs-h", "Move-ins"));
+      sMI.appendChild(el("hr", "cs-hrule"));
+      lines(m.moveins).forEach(function (l) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        line.appendChild(el("span", null, l));
+        sMI.appendChild(line);
+      });
+      cs.appendChild(sMI);
+    }
 
     // instruction / focus
     if (m.instruction) {
