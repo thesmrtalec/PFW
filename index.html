@@ -294,7 +294,12 @@
     }
     .sheet-scroll { padding: 0 !important; overflow: visible !important; height: auto !important; }
     .doc { border: none !important; box-shadow: none !important; border-radius: 0; padding: 0.25in 0.45in; max-width: none !important; margin: 0 !important; background: #fff !important; }
-    .cs-say, .cs-sec, .cs-row { page-break-inside: avoid; }
+    /* Keep atomic units together (a single row, a vote box, a checkline) but
+       let a long SECTION flow across a page boundary rather than jumping the
+       whole thing to the next page and leaving a blank gap. Also keep a section
+       heading attached to the content that follows it. */
+    .cs-say, .cs-row, .cs-checkline, .cs-mission-h { page-break-inside: avoid; break-inside: avoid; }
+    .cs-h, .cs-mission-h { page-break-after: avoid; break-after: avoid; }
     /* single-doc view: no forced breaks, collapse to content */
     #sheetDoc { height: auto !important; min-height: 0 !important; }
     /* swipe pair -> stacked full pages, one per sheet.
@@ -383,7 +388,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.28";
+  var APP_VERSION = "Pioneer Farms v1.0.29";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
