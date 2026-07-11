@@ -408,7 +408,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.37";
+  var APP_VERSION = "Pioneer Farms v1.0.38";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2688,6 +2688,28 @@
     var stamp = d ? " " + d.textContent.trim() : "";
     return (base + stamp).replace(/[^\w \-]/g, "").replace(/\s+/g, "_").slice(0, 60) + ".pdf";
   }
+  // Build a clean, print-styled clone of a sheet node for PDF capture: white
+  // page, document padding, none of the on-screen card chrome (border, shadow,
+  // rounded corners). Returns the temp element; caller removes it after capture.
+  function pdfRenderClone(node) {
+    var page = document.createElement("div");
+    page.style.cssText =
+      "position:fixed;left:-10000px;top:0;width:816px;" +   // 8.5in @ 96dpi
+      "box-sizing:border-box;padding:48px 58px;background:#fff;" +
+      "font-family:inherit;color:#111;";
+    var clone = node.cloneNode(true);
+    // strip card styling from the clone itself
+    clone.style.border = "none";
+    clone.style.boxShadow = "none";
+    clone.style.borderRadius = "0";
+    clone.style.margin = "0";
+    clone.style.padding = "0";
+    clone.style.maxWidth = "none";
+    clone.style.width = "100%";
+    page.appendChild(clone);
+    document.body.appendChild(page);
+    return page;
+  }
   async function exportSheetPdf() {
     if (!window.jspdf || !window.html2canvas) { alert("PDF tools still loading \u2014 try again in a second."); return; }
     var btn = document.getElementById("sheetPdf");
@@ -2699,19 +2721,31 @@
       var pw = pdf.internal.pageSize.getWidth();
       var ph = pdf.internal.pageSize.getHeight();
       var margin = 36; // 0.5in
+      var availW = pw - margin * 2;
+      var availH = ph - margin * 2;
       for (var i = 0; i < nodes.length; i++) {
-        var canvas = await html2canvas(nodes[i], { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-        var imgW = pw - margin * 2;
-        var imgH = canvas.height * (imgW / canvas.width);
+        var temp = pdfRenderClone(nodes[i]);
+        var canvas = await html2canvas(temp, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+        temp.parentNode.removeChild(temp);
         var img = canvas.toDataURL("image/png");
         if (i > 0) pdf.addPage();
-        // if a single node is taller than one page, slice it across pages
-        if (imgH <= ph - margin * 2) {
-          pdf.addImage(img, "PNG", margin, margin, imgW, imgH);
+
+        // Width-fit height (what it'd be if we filled the page width).
+        var widthFitH = canvas.height * (availW / canvas.width);
+
+        if (widthFitH <= availH) {
+          // Fits on one page: scale to fit, centered, so a short program never
+          // spills. Constrain by whichever dimension is limiting.
+          var scale = Math.min(availW / canvas.width, availH / canvas.height);
+          var w = canvas.width * scale;
+          var h = canvas.height * scale;
+          pdf.addImage(img, "PNG", (pw - w) / 2, margin, w, h);
         } else {
-          var sliceH = ph - margin * 2;
-          var pxPerPt = canvas.width / imgW;
-          var remaining = imgH, srcY = 0, first = true;
+          // Genuinely taller than one page (e.g. a long conducting brief):
+          // fill width and slice across pages at page-height boundaries.
+          var pxPerPt = canvas.width / availW;
+          var sliceH = availH;
+          var remaining = widthFitH, srcY = 0, first = true;
           while (remaining > 0.5) {
             if (!first) pdf.addPage();
             first = false;
@@ -2722,7 +2756,7 @@
             var ctx = sCanvas.getContext("2d");
             ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, sCanvas.width, sCanvas.height);
             ctx.drawImage(canvas, 0, Math.round(srcY * pxPerPt), canvas.width, sCanvas.height, 0, 0, canvas.width, sCanvas.height);
-            pdf.addImage(sCanvas.toDataURL("image/png"), "PNG", margin, margin, imgW, thisH);
+            pdf.addImage(sCanvas.toDataURL("image/png"), "PNG", margin, margin, availW, thisH);
             srcY += thisH; remaining -= thisH;
           }
         }
