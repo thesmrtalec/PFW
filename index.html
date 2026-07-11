@@ -408,7 +408,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.38";
+  var APP_VERSION = "Pioneer Farms v1.0.39";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -736,6 +736,7 @@
 
   // ---------- state ----------
   var state = { weeks: [], bishopric: [], assignments: [], council: [], councilAssignments: [] };
+  var currentSheet = null; // { type, data } for the open output sheet; drives PDF export
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
   var archiveOpen = { sacrament: false, bishopric: false };
 
@@ -1463,9 +1464,9 @@
     // ===== outputs =====
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Program");
-    b1.onclick = function () { openSheet(buildProgram(w)); };
+    b1.onclick = function () { currentSheet = { type: "program", data: w }; openSheet(buildProgram(w)); };
     var b2 = el("button", "btn secondary", "Conducting");
-    b2.onclick = function () { openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
+    b2.onclick = function () { currentSheet = { type: "conducting", data: w }; openSheetPair(buildProgram(w), "Program", buildScript(w), "Conducting brief"); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
 
@@ -1714,9 +1715,9 @@
     // ===== outputs =====
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Agenda");
-    b1.onclick = function () { openSheet(buildAgenda(m)); };
+    b1.onclick = function () { currentSheet = { type: "agenda", data: m }; openSheet(buildAgenda(m)); };
     var b2 = el("button", "btn secondary", m.sentAgenda ? "Follow-up \u2192" : "Follow-up");
-    b2.onclick = function () { openSheet(buildFollowUp(m)); };
+    b2.onclick = function () { currentSheet = { type: "followup", data: m }; openSheet(buildFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
     app.appendChild(sentStatusBar(m, "bishopric"));
@@ -2104,9 +2105,9 @@
     // ===== outputs =====
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Agenda");
-    b1.onclick = function () { openSheet(buildCouncilAgenda(m)); };
+    b1.onclick = function () { currentSheet = { type: "council-agenda", data: m }; openSheet(buildCouncilAgenda(m)); };
     var b2 = el("button", "btn secondary", m.sentAgenda ? "Follow-up \u2192" : "Follow-up");
-    b2.onclick = function () { openSheet(buildCouncilFollowUp(m)); };
+    b2.onclick = function () { currentSheet = { type: "council-followup", data: m }; openSheet(buildCouncilFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
     app.appendChild(sentStatusBar(m, "council"));
@@ -2588,6 +2589,7 @@
       });
       return wrap;
     }
+    currentSheet = { type: "overview", data: null };
     openSheet(build());
   }
 
@@ -2710,13 +2712,109 @@
     document.body.appendChild(page);
     return page;
   }
+  // Hand a finished jsPDF to the user: native share on iPhone, reliable
+  // download-to-Files on iPad (where the share popover anchors off-screen).
+  async function deliverPdf(pdf, name) {
+    var blob = pdf.output("blob");
+    var file = new File([blob], name, { type: "application/pdf" });
+    var isIPad = /iPad/.test(navigator.userAgent) ||
+                 (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    var canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
+    if (canShareFiles && !isIPad) {
+      await navigator.share({ files: [file], title: name.replace(/_/g, " ").replace(/\.pdf$/, "") });
+    } else {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name; a.rel = "noopener";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }
+  }
+  function programPdfName(w) {
+    return ("Sacrament Meeting " + fmtShort(w.date)).replace(/[^\w \-]/g, "").replace(/\s+/g, "_") + ".pdf";
+  }
+
+  // Draw the sacrament program as real text (the "Option C" formal layout):
+  // church-name eyebrow, serif title, ward, date, framed dotted-leader rows.
+  function drawProgramPdf(pdf, w) {
+    var PW = pdf.internal.pageSize.getWidth();
+    var cx = PW / 2;
+    var left = 79, right = PW - 79;      // ~1.1in
+    var INK = "#1b2a3a", MUT = "#6b7683", RULE = "#c9ced4";
+
+    var rows = [];
+    function add(label, val) { if (val) rows.push([label, val]); }
+    add("Conducting", w.conducting);
+    add("Opening Hymn", hymnClean(w.openingHymn));
+    add("Invocation", w.invocation);
+    add("Sacrament Hymn", hymnClean(w.sacramentHymn));
+    if (w.testimony) {
+      add("Program", "Testimony Meeting");
+    } else {
+      add("Youth Speaker", w.youthSpeaker);
+      (w.speakers || []).forEach(function (sp, i) { if (sp.name) add("Speaker " + (i + 1), sp.name); });
+    }
+    add("Rest Hymn", hymnClean(w.restHymn));
+    add("Musical Number", w.musical);
+    add("Closing Hymn", hymnClean(w.closingHymn));
+    add("Benediction", w.benediction);
+
+    pdf.setDrawColor(INK); pdf.setLineWidth(2);
+    pdf.line(left, 61, right, 61);
+
+    var y = 85;
+    pdf.setTextColor(MUT); pdf.setFont("helvetica", "normal"); pdf.setFontSize(8.5);
+    pdf.text("THE CHURCH OF JESUS CHRIST OF LATTER-DAY SAINTS", cx, y, { align: "center", charSpace: 1.6 });
+    y += 30;
+    pdf.setTextColor(INK); pdf.setFont("times", "bold"); pdf.setFontSize(26);
+    pdf.text("Sacrament Meeting", cx, y, { align: "center" });
+    y += 22;
+    pdf.setFont("times", "italic"); pdf.setFontSize(14);
+    pdf.text(WARD, cx, y, { align: "center" });
+    y += 17;
+    pdf.setTextColor(MUT); pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
+    pdf.text(fmtDate(w.date), cx, y, { align: "center" });
+    y += 13;
+    pdf.setDrawColor(INK); pdf.setLineWidth(2);
+    pdf.line(left, y, right, y);
+
+    y += 34;
+    var lx = 101, vx = PW - 101; // ~1.4in
+    rows.forEach(function (r) {
+      var lab = r[0], val = r[1];
+      pdf.setTextColor(INK); pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
+      pdf.text(lab, lx, y);
+      var lw = pdf.getTextWidth(lab);
+      pdf.setFont("times", "normal"); pdf.setFontSize(12.5);
+      pdf.text(val, vx, y, { align: "right" });
+      var rw = pdf.getTextWidth(val);
+      pdf.setDrawColor(RULE); pdf.setLineWidth(0.4);
+      pdf.setLineDashPattern([1, 3], 0);
+      pdf.line(lx + lw + 6, y - 3, vx - rw - 6, y - 3);
+      pdf.setLineDashPattern([], 0);
+      y += 27;
+    });
+
+    pdf.setDrawColor(INK); pdf.setLineWidth(2);
+    pdf.line(left, y - 4, right, y - 4);
+  }
+
   async function exportSheetPdf() {
     if (!window.jspdf || !window.html2canvas) { alert("PDF tools still loading \u2014 try again in a second."); return; }
     var btn = document.getElementById("sheetPdf");
     var label = btn.textContent; btn.textContent = "Building\u2026"; btn.disabled = true;
     try {
-      var nodes = sheetPdfNodes();
       var jsPDF = window.jspdf.jsPDF;
+
+      // The sacrament program is drawn as real, crisp text (not a screenshot),
+      // so it looks like an actual printed program when sent to the ward.
+      if (currentSheet && currentSheet.type === "program" && currentSheet.data) {
+        var ppdf = new jsPDF({ unit: "pt", format: "letter" });
+        drawProgramPdf(ppdf, currentSheet.data);
+        await deliverPdf(ppdf, programPdfName(currentSheet.data));
+        return;
+      }
+
       var pdf = new jsPDF({ unit: "pt", format: "letter" });
       var pw = pdf.internal.pageSize.getWidth();
       var ph = pdf.internal.pageSize.getHeight();
@@ -2762,30 +2860,7 @@
         }
       }
       var name = sheetPdfName();
-      var blob = pdf.output("blob");
-      var file = new File([blob], name, { type: "application/pdf" });
-
-      // iPad is the problem case: navigator.share() fired AFTER the async
-      // html2canvas work loses its user-gesture context, so iPadOS anchors the
-      // share popover off-screen (unreachable). Detect iPad and take the
-      // reliable path instead: hand the PDF to the system viewer, which shows a
-      // properly-anchored share button. iPhone share works fine, so keep it.
-      var isIPad = /iPad/.test(navigator.userAgent) ||
-                   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS 13+ reports as Mac
-      var canShareFiles = navigator.canShare && navigator.canShare({ files: [file] });
-
-      if (canShareFiles && !isIPad) {
-        await navigator.share({ files: [file], title: name.replace(/_/g, " ").replace(/\.pdf$/, "") });
-      } else {
-        // iPad / no-share: download straight to Files. This never parks an
-        // off-screen popover and always lands somewhere reachable (Downloads),
-        // from which the normal iOS share options are available.
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url; a.download = name; a.rel = "noopener";
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-      }
+      await deliverPdf(pdf, name);
     } catch (e) {
       console.error("PDF export failed:", e);
       if (e && e.name !== "AbortError") alert("Couldn\u2019t build the PDF. " + (e.message || ""));
