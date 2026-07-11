@@ -83,6 +83,13 @@
   .sub-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 14px 0 6px; padding-top: 12px; border-top: 1px dashed var(--rule); }
   .bm-chip { display: inline-block; margin-top: 5px; font-family: var(--sans); font-size: 13px; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
   .bm-chip::before { content: "\2192 "; opacity: .6; }
+  .sent-bar { display: flex; align-items: center; gap: 8px; margin: 10px auto 0; max-width: 520px; padding: 9px 13px; border-radius: 10px; background: var(--card); border: 1px dashed var(--rule); font-size: 13px; color: var(--muted); }
+  .sent-bar.is-sent { border-style: solid; border-color: var(--confirmed); background: var(--confirmed-soft); color: var(--confirmed); }
+  .sent-bar .sent-txt { flex: 1; }
+  .sent-bar .sent-dot { font-weight: 800; }
+  .sent-bar .sent-mark { background: var(--deep); color: #fff; border: none; border-radius: 7px; padding: 7px 13px; font-size: 13px; font-weight: 600; }
+  .sent-bar .sent-undo { background: transparent; border: none; color: var(--confirmed); font-size: 12px; text-decoration: underline; }
+  .week-tag.sent-tag { background: var(--confirmed-soft); color: var(--confirmed); }
 
   .field { margin-bottom: 12px; }
   .field:last-child { margin-bottom: 4px; }
@@ -376,7 +383,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.27";
+  var APP_VERSION = "Pioneer Farms v1.0.28";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -798,7 +805,7 @@
     state.bishopric = (bm || []).map(function (m) {
       return {
         id: m.id, date: m.meeting_date, moveins: m.moveins || "", ministering: m.ministering || "",
-        ordinances: m.ordinances || "", notes: m.notes || "",
+        ordinances: m.ordinances || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
         counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
         callings: kids(bk, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "", status: s.status || "consider" }; })
       };
@@ -814,7 +821,7 @@
         moveins: m.moveins || "",
         instruction: m.instruction || "",
         live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
-        coordination: m.coordination || "", notes: m.notes || "",
+        coordination: m.coordination || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
         counsel: kids(cc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; })
       };
     });
@@ -856,14 +863,14 @@
     });
     var bmRows = state.bishopric.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, ministering: m.ministering,
-                ordinances: m.ordinances, notes: m.notes, updated_at: new Date().toISOString() };
+                ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
     var cmRows = state.council.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, instruction: m.instruction,
                 live: m.live, care: m.care, invite: m.invite, unite: m.unite,
-                coordination: m.coordination, notes: m.notes, updated_at: new Date().toISOString() };
+                coordination: m.coordination, notes: m.notes, sent_agenda: m.sentAgenda || null, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
@@ -992,7 +999,8 @@
       ministering: "",
       ordinances: "",
       callings: [],       // [{id, name, calling, status}]
-      notes: ""
+      notes: "",
+      sentAgenda: null    // ISO date the agenda was marked sent (the "locked" checkpoint)
     };
   }
   function findBishopric(id) { return state.bishopric.filter(function (m) { return m.id === id; })[0]; }
@@ -1038,7 +1046,8 @@
       invite: "",          // Invite all to receive the gospel (missionary)
       unite: "",           // Unite families for eternity (temple & family history)
       coordination: "",    // programs / activities / calendar
-      notes: ""
+      notes: "",
+      sentAgenda: null     // ISO date the agenda was marked sent
     };
   }
   function findCouncil(id) { return state.council.filter(function (m) { return m.id === id; })[0]; }
@@ -1494,7 +1503,10 @@
       if ((m.callings || []).length) bits.push((m.callings.length) + " calling" + (m.callings.length === 1 ? "" : "s"));
       when.appendChild(el("div", "week-meta", bits.join(" \u00b7 ") || "not filled in yet"));
       card.appendChild(when);
-      card.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
+      var tagWrap = el("div"); tagWrap.style.cssText = "display:flex;flex-direction:column;gap:4px;align-items:flex-end;";
+      tagWrap.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
+      if (m.sentAgenda) tagWrap.appendChild(el("span", "week-tag sent-tag", "sent \u2713"));
+      card.appendChild(tagWrap);
       card.onclick = function () { view = { tab: "bishopric", screen: "editor", bmId: m.id }; render(); };
       return card;
     }
@@ -1676,10 +1688,11 @@
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Agenda");
     b1.onclick = function () { openSheet(buildAgenda(m)); };
-    var b2 = el("button", "btn secondary", "Follow-up");
+    var b2 = el("button", "btn secondary", m.sentAgenda ? "Follow-up \u2192" : "Follow-up");
     b2.onclick = function () { openSheet(buildFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
+    app.appendChild(sentStatusBar(m));
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -1888,7 +1901,10 @@
       if ((m.counsel || []).length) bits.push((m.counsel.length) + " to counsel");
       when.appendChild(el("div", "week-meta", bits.join(" \u00b7 ") || "not filled in yet"));
       card.appendChild(when);
-      card.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
+      var tagWrap = el("div"); tagWrap.style.cssText = "display:flex;flex-direction:column;gap:4px;align-items:flex-end;";
+      tagWrap.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
+      if (m.sentAgenda) tagWrap.appendChild(el("span", "week-tag sent-tag", "sent \u2713"));
+      card.appendChild(tagWrap);
       card.onclick = function () { view = { tab: "council", screen: "editor", cmId: m.id }; render(); };
       return card;
     }
@@ -2050,10 +2066,11 @@
     var out = el("div", "out-bar");
     var b1 = el("button", "btn", "Agenda");
     b1.onclick = function () { openSheet(buildCouncilAgenda(m)); };
-    var b2 = el("button", "btn secondary", "Follow-up");
+    var b2 = el("button", "btn secondary", m.sentAgenda ? "Follow-up \u2192" : "Follow-up");
     b2.onclick = function () { openSheet(buildCouncilFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
+    app.appendChild(sentStatusBar(m));
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -2226,6 +2243,31 @@
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
+
+  // Before/after checkpoint: a meeting's agenda can be "marked sent", which
+  // stamps the date and gives a visible locked-version marker. Follow-up is the
+  // "after" send once assignments are captured live.
+  function sentStatusBar(m) {
+    var wrap = el("div", "sent-bar");
+    if (m.sentAgenda) {
+      wrap.classList.add("is-sent");
+      wrap.appendChild(el("span", "sent-dot", "\u2713"));
+      var txt = el("span", "sent-txt");
+      txt.appendChild(el("strong", null, "Agenda sent"));
+      txt.appendChild(document.createTextNode(" \u00b7 " + fmtShort(m.sentAgenda)));
+      wrap.appendChild(txt);
+      var undo = el("button", "sent-undo", "undo");
+      undo.onclick = function () { m.sentAgenda = null; save(); render(); };
+      wrap.appendChild(undo);
+    } else {
+      wrap.appendChild(el("span", "sent-txt", "Not sent yet \u2014 mark it when the agenda goes out."));
+      var mark = el("button", "sent-mark", "Mark sent");
+      mark.onclick = function () { m.sentAgenda = todayISO(); save(); render(); };
+      wrap.appendChild(mark);
+    }
+    return wrap;
+  }
+
   function lines(str) { return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
   function docLine(label, val) {
     if (!val) return null;
