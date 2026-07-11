@@ -229,6 +229,10 @@
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
   .cs-mission-h { font-family: var(--sans); font-size: 12px; font-weight: 700; color: #1c2430; margin: 8px 0 3px; }
   .cs-caption { font-family: var(--sans); font-size: 10.5px; font-style: italic; letter-spacing: .02em; color: #999; margin: -2px 0 5px; }
+  /* lines added after the agenda was locked ("sent") \u2014 flagged on reprint */
+  .cs-checkline.is-new, .cs-checkline.is-new *, .cs-row.is-new, .cs-row.is-new *, .cs-note.is-new { font-style: italic !important; color: #8a8a8a !important; }
+  .cs-checkline.is-new .cs-box { color: #b0b0b0 !important; }
+  .cs-checkline.is-new::after { content: " \00b7 added"; font-size: 9px; font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: #b0b0b0; vertical-align: 1px; }
   .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
@@ -294,7 +298,7 @@
       overflow: visible !important; height: auto !important; min-height: 0 !important; display: block !important;
     }
     .sheet-scroll { padding: 0 !important; overflow: visible !important; height: auto !important; }
-    .doc { border: none !important; box-shadow: none !important; border-radius: 0; padding: 0.25in 0.45in; max-width: none !important; margin: 0 !important; background: #fff !important; }
+    .doc { border: none !important; box-shadow: none !important; border-radius: 0; padding: 0.5in 0.6in; max-width: none !important; margin: 0 !important; background: #fff !important; }
     /* Compress the agenda's vertical rhythm in print so a normal week's agenda
        collapses onto one page instead of spilling a mostly-empty second sheet.
        (Only affects the single-doc sheets; the flat pair path has its own.) */
@@ -342,7 +346,7 @@
     /* force a break BEFORE every page except the first; never after */
     .print-flat-page + .print-flat-page { page-break-before: always; break-before: page; }
     .print-flat-page:last-child { page-break-after: avoid; break-after: avoid; }
-    .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
+    .print-flat-page .doc { border: none !important; box-shadow: none !important; padding: 0.5in 0.6in !important; margin: 0 !important; max-width: none !important; background: #fff !important; }
     /* a trailing bottom-margin on the last block can round up onto a new sheet */
     .print-flat-page .doc > *:last-child { margin-bottom: 0 !important; }
     /* conducting brief runs slightly over one sheet; compress its vertical
@@ -358,7 +362,7 @@
        Anything left in normal flow (the empty overlay, an over-tall scroll box)
        is what iOS was paginating into a trailing blank sheet. */
     body.printing-flat > *:not(#printFlat) { display: none !important; }
-    @page { margin: 0.5in 0.75in; }
+    @page { margin: 0; }
   }
 </style>
 </head>
@@ -401,7 +405,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.30";
+  var APP_VERSION = "Pioneer Farms v1.0.33";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -824,6 +828,7 @@
       return {
         id: m.id, date: m.meeting_date, moveins: m.moveins || "", ministering: m.ministering || "",
         ordinances: m.ordinances || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
+        lockSnapshot: m.lock_snapshot || null,
         counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
         callings: kids(bk, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "", status: s.status || "consider" }; })
       };
@@ -840,6 +845,7 @@
         instruction: m.instruction || "",
         live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
         coordination: m.coordination || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
+        lockSnapshot: m.lock_snapshot || null,
         counsel: kids(cc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; })
       };
     });
@@ -881,14 +887,14 @@
     });
     var bmRows = state.bishopric.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, ministering: m.ministering,
-                ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, updated_at: new Date().toISOString() };
+                ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
     var cmRows = state.council.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, instruction: m.instruction,
                 live: m.live, care: m.care, invite: m.invite, unite: m.unite,
-                coordination: m.coordination, notes: m.notes, sent_agenda: m.sentAgenda || null, updated_at: new Date().toISOString() };
+                coordination: m.coordination, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null, updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
@@ -1298,7 +1304,7 @@
 
     // ===== This meeting =====
     var z0 = el("div", "zone");
-    zoneHead(z0, "This meeting");
+    zoneHead(z0, "Sacrament Meeting");
     var df = el("div", "field");
     df.appendChild(el("label", null, "date"));
     var dinput = el("input"); dinput.type = "date"; dinput.value = w.date;
@@ -1569,7 +1575,7 @@
 
     // ===== date =====
     var z0 = el("div", "zone");
-    zoneHead(z0, "This meeting", null, "private", "badge-private");
+    zoneHead(z0, "Bishopric Meeting", null, "private", "badge-private");
     var df = el("div", "field");
     df.appendChild(el("label", null, "date"));
     var dinput = el("input"); dinput.type = "date"; dinput.value = m.date;
@@ -1710,7 +1716,7 @@
     b2.onclick = function () { openSheet(buildFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
-    app.appendChild(sentStatusBar(m));
+    app.appendChild(sentStatusBar(m, "bishopric"));
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -1728,6 +1734,7 @@
 
   // ---- bishopric agenda (one page, assignments up top) ----
   function buildAgenda(m) {
+    var isNew = newLineTester(m); // flags lines added after the agenda was locked
     var doc = document.createDocumentFragment();
     var cs = el("div", "cs");
     doc.appendChild(cs);
@@ -1745,6 +1752,7 @@
     } else {
       open.forEach(function (a) {
         var line = el("div", "cs-checkline");
+        if (isNew("A|" + (a.who||"") + "|" + a.what)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         var t = el("span");
         if (a.who) { t.appendChild(el("strong", null, a.who + ": ")); }
@@ -1763,6 +1771,7 @@
       sMI.appendChild(el("hr", "cs-hrule"));
       lines(m.moveins).forEach(function (l) {
         var line = el("div", "cs-checkline");
+        if (isNew("MI|" + l)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         line.appendChild(el("span", null, l));
         sMI.appendChild(line);
@@ -1777,7 +1786,9 @@
       sC.appendChild(el("hr", "cs-hrule"));
       m.counsel.forEach(function (c) {
         if (!c.name) return;
-        sC.appendChild(csRow(c.name, c.note || ""));
+        var r = csRow(c.name, c.note || "");
+        if (isNew("C|" + c.name + "|" + (c.note||""))) r.classList.add("is-new");
+        sC.appendChild(r);
       });
       cs.appendChild(sC);
     }
@@ -1789,6 +1800,7 @@
       sO.appendChild(el("hr", "cs-hrule"));
       lines(m.ordinances).forEach(function (l) {
         var line = el("div", "cs-checkline");
+        if (isNew("O|" + l)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         line.appendChild(el("span", null, l));
         sO.appendChild(line);
@@ -1803,7 +1815,9 @@
       sK.appendChild(el("hr", "cs-hrule"));
       m.callings.forEach(function (c) {
         if (!c.name && !c.calling) return;
-        sK.appendChild(csRow(c.calling || "\u2014", c.name || "", "(" + (c.status || "consider") + ")"));
+        var r = csRow(c.calling || "\u2014", c.name || "", "(" + (c.status || "consider") + ")");
+        if (isNew("K|" + (c.name||"") + "|" + (c.calling||""))) r.classList.add("is-new");
+        sK.appendChild(r);
       });
       cs.appendChild(sK);
     }
@@ -1813,7 +1827,11 @@
       var sN = el("div", "cs-sec");
       sN.appendChild(el("div", "cs-h", "Notes & Instruction"));
       sN.appendChild(el("hr", "cs-hrule"));
-      lines(m.notes).forEach(function (l) { sN.appendChild(el("div", "cs-note", l)); });
+      lines(m.notes).forEach(function (l) {
+        var nl = el("div", "cs-note", l);
+        if (isNew("N|" + l)) nl.classList.add("is-new");
+        sN.appendChild(nl);
+      });
       cs.appendChild(sN);
     }
 
@@ -1967,7 +1985,7 @@
 
     // ===== date =====
     var z0 = el("div", "zone");
-    zoneHead(z0, "This meeting", null, "private", "badge-private");
+    zoneHead(z0, "Ward Council", null, "private", "badge-private");
     var df = el("div", "field");
     df.appendChild(el("label", null, "date"));
     var dinput = el("input"); dinput.type = "date"; dinput.value = m.date;
@@ -2088,7 +2106,7 @@
     b2.onclick = function () { openSheet(buildCouncilFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
-    app.appendChild(sentStatusBar(m));
+    app.appendChild(sentStatusBar(m, "council"));
 
     var del = el("button", "danger", "delete this meeting");
     del.style.cssText += "display:block;margin:14px auto 0;";
@@ -2106,6 +2124,7 @@
 
   // ---- ward council agenda (one page, assignments up top) ----
   function buildCouncilAgenda(m) {
+    var isNew = newLineTester(m);
     var doc = document.createDocumentFragment();
     var cs = el("div", "cs");
     doc.appendChild(cs);
@@ -2123,6 +2142,7 @@
     } else {
       open.forEach(function (a) {
         var line = el("div", "cs-checkline");
+        if (isNew("A|" + (a.who||"") + "|" + a.what)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         var t = el("span");
         if (a.who) { t.appendChild(el("strong", null, a.who + ": ")); }
@@ -2141,6 +2161,7 @@
       sMI.appendChild(el("hr", "cs-hrule"));
       lines(m.moveins).forEach(function (l) {
         var line = el("div", "cs-checkline");
+        if (isNew("MI|" + l)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         line.appendChild(el("span", null, l));
         sMI.appendChild(line);
@@ -2153,7 +2174,11 @@
       var sI = el("div", "cs-sec");
       sI.appendChild(el("div", "cs-h", "Instruction & Focus"));
       sI.appendChild(el("hr", "cs-hrule"));
-      lines(m.instruction).forEach(function (l) { sI.appendChild(el("div", "cs-note", l)); });
+      lines(m.instruction).forEach(function (l) {
+        var nl = el("div", "cs-note", l);
+        if (isNew("I|" + l)) nl.classList.add("is-new");
+        sI.appendChild(nl);
+      });
       cs.appendChild(sI);
     }
 
@@ -2165,6 +2190,7 @@
       m.counsel.forEach(function (c) {
         if (!c.name) return;
         var line = el("div", "cs-checkline");
+        if (isNew("C|" + c.name + "|" + (c.note||""))) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         var t = el("span");
         t.appendChild(el("strong", null, c.name));
@@ -2187,6 +2213,7 @@
         sM.appendChild(el("div", "cs-mission-h", mi.title));
         lines(m[mi.key]).forEach(function (l) {
           var line = el("div", "cs-checkline");
+          if (isNew(mi.key + "|" + l)) line.classList.add("is-new");
           line.appendChild(el("span", "cs-box", "\u25a1"));
           line.appendChild(el("span", null, l));
           sM.appendChild(line);
@@ -2202,6 +2229,7 @@
       sCo.appendChild(el("hr", "cs-hrule"));
       lines(m.coordination).forEach(function (l) {
         var line = el("div", "cs-checkline");
+        if (isNew("CO|" + l)) line.classList.add("is-new");
         line.appendChild(el("span", "cs-box", "\u25a1"));
         line.appendChild(el("span", null, l));
         sCo.appendChild(line);
@@ -2214,7 +2242,11 @@
       var sN = el("div", "cs-sec");
       sN.appendChild(el("div", "cs-h", "Notes"));
       sN.appendChild(el("hr", "cs-hrule"));
-      lines(m.notes).forEach(function (l) { sN.appendChild(el("div", "cs-note", l)); });
+      lines(m.notes).forEach(function (l) {
+        var nl = el("div", "cs-note", l);
+        if (isNew("N|" + l)) nl.classList.add("is-new");
+        sN.appendChild(nl);
+      });
       cs.appendChild(sN);
     }
 
@@ -2266,7 +2298,48 @@
   // Before/after checkpoint: a meeting's agenda can be "marked sent", which
   // stamps the date and gives a visible locked-version marker. Follow-up is the
   // "after" send once assignments are captured live.
-  function sentStatusBar(m) {
+  //
+  // Locking also snapshots every text line on the agenda. On a later reprint,
+  // any line NOT in the snapshot renders italic+grey \u2014 so live/post-meeting
+  // additions are visibly flagged against the locked baseline.
+  function bishopricAgendaLines(m) {
+    var out = [];
+    councilOrBishopAssignmentsOpen(m, "bishopric").forEach(function (a) { out.push("A|" + (a.who||"") + "|" + a.what); });
+    lines(m.moveins).forEach(function (l) { out.push("MI|" + l); });
+    (m.counsel || []).forEach(function (c) { if (c.name) out.push("C|" + c.name + "|" + (c.note||"")); });
+    lines(m.ordinances).forEach(function (l) { out.push("O|" + l); });
+    (m.callings || []).forEach(function (c) { if (c.name || c.calling) out.push("K|" + (c.name||"") + "|" + (c.calling||"") ); });
+    lines(m.notes).forEach(function (l) { out.push("N|" + l); });
+    return out;
+  }
+  function councilAgendaLines(m) {
+    var out = [];
+    councilOrBishopAssignmentsOpen(m, "council").forEach(function (a) { out.push("A|" + (a.who||"") + "|" + a.what); });
+    lines(m.moveins).forEach(function (l) { out.push("MI|" + l); });
+    lines(m.instruction).forEach(function (l) { out.push("I|" + l); });
+    (m.counsel || []).forEach(function (c) { if (c.name) out.push("C|" + c.name + "|" + (c.note||"")); });
+    COUNCIL_MISSIONS.forEach(function (mi) { lines(m[mi.key]).forEach(function (l) { out.push(mi.key + "|" + l); }); });
+    lines(m.coordination).forEach(function (l) { out.push("CO|" + l); });
+    lines(m.notes).forEach(function (l) { out.push("N|" + l); });
+    return out;
+  }
+  function councilOrBishopAssignmentsOpen(m, tab) {
+    return (tab === "council" ? councilAssignmentsForMeeting(m.id) : assignmentsForMeeting(m.id))
+      .filter(function (a) { return a.status !== "done"; });
+  }
+  // returns a function(lineKey) -> true if that line was added after lock
+  function newLineTester(m) {
+    if (!m.sentAgenda || !m.lockSnapshot) return function () { return false; };
+    var snap = {}; (m.lockSnapshot || []).forEach(function (k) { snap[k] = 1; });
+    return function (key) { return !snap[key]; };
+  }
+  function markSent(m, tab) {
+    m.sentAgenda = todayISO();
+    m.lockSnapshot = (tab === "council" ? councilAgendaLines(m) : bishopricAgendaLines(m));
+    save();
+  }
+
+  function sentStatusBar(m, tab) {
     var wrap = el("div", "sent-bar");
     if (m.sentAgenda) {
       wrap.classList.add("is-sent");
@@ -2276,12 +2349,12 @@
       txt.appendChild(document.createTextNode(" \u00b7 " + fmtShort(m.sentAgenda)));
       wrap.appendChild(txt);
       var undo = el("button", "sent-undo", "undo");
-      undo.onclick = function () { m.sentAgenda = null; save(); render(); };
+      undo.onclick = function () { m.sentAgenda = null; m.lockSnapshot = null; save(); render(); };
       wrap.appendChild(undo);
     } else {
       wrap.appendChild(el("span", "sent-txt", "Not sent yet \u2014 mark it when the agenda goes out."));
       var mark = el("button", "sent-mark", "Mark sent");
-      mark.onclick = function () { m.sentAgenda = todayISO(); save(); render(); };
+      mark.onclick = function () { markSent(m, tab); render(); };
       wrap.appendChild(mark);
     }
     return wrap;
