@@ -218,6 +218,7 @@
   .cs-say .cs-quote + .cs-checkline { margin-top: 5px; }
   .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
+  .cs-mission-h { font-family: var(--sans); font-size: 12px; font-weight: 700; color: #1c2430; margin: 8px 0 3px; }
   .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
@@ -339,6 +340,7 @@
 <datalist id="dl-names"></datalist>
 <datalist id="dl-callings"></datalist>
 <datalist id="dl-assignees"></datalist>
+<datalist id="dl-council-assignees"></datalist>
 <div class="wrap" id="app"></div>
 
 <div class="sheet-overlay" id="sheetOverlay">
@@ -500,10 +502,11 @@
 
   // Harvest distinct names / callings from everything already entered.
   function harvestSuggestions() {
-    var names = {}, callings = {}, assignees = {};
+    var names = {}, callings = {}, assignees = {}, councilAssignees = {};
     function addName(v) { v = (v || "").trim(); if (v) names[v] = 1; }
     function addCalling(v) { v = (v || "").trim(); if (v) callings[v] = 1; }
     function addAssignee(v) { v = (v || "").trim(); if (v) assignees[v] = 1; }
+    function addCouncilAssignee(v) { v = (v || "").trim(); if (v) councilAssignees[v] = 1; }
     (state.weeks || []).forEach(function (w) {
       (w.speakers || []).forEach(function (s) { addName(s.name); });
       addName(w.youthSpeaker);
@@ -514,14 +517,19 @@
       (m.counsel || []).forEach(function (c) { addName(c.name); });
       (m.callings || []).forEach(function (c) { addName(c.name); addCalling(c.calling); });
     });
-    // Assignees are a small, closed set (the bishopric + a few helpers). Keep
-    // their suggestions SEPARATE from the general name pool so this field only
-    // ever offers people who've actually been assigned something before.
+    (state.council || []).forEach(function (m) {
+      (m.counsel || []).forEach(function (c) { addName(c.name); });
+    });
+    // Assignees are a small, closed set (the bishopric / council + a few
+    // helpers). Keep their suggestions SEPARATE from the general name pool and
+    // from each other so each field only offers people actually assigned there.
     (state.assignments || []).forEach(function (a) { addAssignee(a.who); });
+    (state.councilAssignments || []).forEach(function (a) { addCouncilAssignee(a.who); });
     return {
       names: Object.keys(names).sort(function (a, b) { return a.localeCompare(b); }),
       callings: Object.keys(callings).sort(function (a, b) { return a.localeCompare(b); }),
-      assignees: Object.keys(assignees).sort(function (a, b) { return a.localeCompare(b); })
+      assignees: Object.keys(assignees).sort(function (a, b) { return a.localeCompare(b); }),
+      councilAssignees: Object.keys(councilAssignees).sort(function (a, b) { return a.localeCompare(b); })
     };
   }
   // Populate the shared <datalist> elements from current data.
@@ -530,6 +538,7 @@
     fillList("dl-names", s.names);
     fillList("dl-callings", s.callings);
     fillList("dl-assignees", s.assignees);
+    fillList("dl-council-assignees", s.councilAssignees);
   }
   function fillList(id, items) {
     var dl = document.getElementById(id);
@@ -634,7 +643,7 @@
   });
 
   // ---------- state ----------
-  var state = { weeks: [], bishopric: [], assignments: [] };
+  var state = { weeks: [], bishopric: [], assignments: [], council: [], councilAssignments: [] };
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
   var archiveOpen = { sacrament: false, bishopric: false };
 
@@ -691,19 +700,22 @@
       sb.from("bishopric_meetings").select("*"),
       sb.from("bishopric_counsel").select("*"),
       sb.from("bishopric_callings").select("*"),
-      sb.from("assignments").select("*")
+      sb.from("assignments").select("*"),
+      sb.from("council_meetings").select("*"),
+      sb.from("council_counsel").select("*"),
+      sb.from("council_assignments").select("*")
     ]).then(function (res) {
       var err = res.filter(function (r) { return r.error; })[0];
       if (err) { pill("error", "load failed"); console.error(err.error); if (cb) cb(err.error); return; }
       var d = res.map(function (r) { return r.data || []; });
-      hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7]);
+      hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10]);
       pill("saved", "loaded");
       if (cb) cb(null);
     }).catch(function (e) { pill("error", "load failed"); console.error(e); if (cb) cb(e); });
   }
 
   // map DB rows -> in-memory camelCase model the UI already uses
-  function hydrate(sm, spk, rel, cal, bm, bc, bk, asg) {
+  function hydrate(sm, spk, rel, cal, bm, bc, bk, asg, cm, cc, casg) {
     function kids(rows, mid) { return rows.filter(function (x) { return x.meeting_id === mid; }).sort(function (a, b) { return (a.position||0)-(b.position||0); }); }
     state.weeks = (sm || []).map(function (m) {
       return {
@@ -732,6 +744,20 @@
       };
     });
     state.assignments = (asg || []).map(function (a) {
+      return { id: a.id, who: a.assignee || "", what: a.what || "", status: a.status || "open",
+               dateMade: a.date_made, dateDone: a.date_done, meetingId: a.origin_meeting };
+    });
+
+    state.council = (cm || []).map(function (m) {
+      return {
+        id: m.id, date: m.meeting_date,
+        instruction: m.instruction || "",
+        live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
+        coordination: m.coordination || "", notes: m.notes || "",
+        counsel: kids(cc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; })
+      };
+    });
+    state.councilAssignments = (casg || []).map(function (a) {
       return { id: a.id, who: a.assignee || "", what: a.what || "", status: a.status || "open",
                dateMade: a.date_made, dateDone: a.date_done, meetingId: a.origin_meeting };
     });
@@ -773,13 +799,21 @@
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
+    var cmRows = state.council.map(function (m) {
+      var r = { owner: owner, meeting_date: m.date, instruction: m.instruction,
+                live: m.live, care: m.care, invite: m.invite, unite: m.unite,
+                coordination: m.coordination, notes: m.notes, updated_at: new Date().toISOString() };
+      if (isUuid(m.id)) r.id = m.id;
+      return r;
+    });
 
     // meetings first (children need their ids), then reconcile children + assignments
     Promise.all([
       smRows.length ? sb.from("sacrament_meetings").upsert(smRows) : Promise.resolve({ error: null }),
-      bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows) : Promise.resolve({ error: null })
+      bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows) : Promise.resolve({ error: null }),
+      cmRows.length ? sb.from("council_meetings").upsert(cmRows) : Promise.resolve({ error: null })
     ]).then(function (r) {
-      if (r[0].error || r[1].error) throw (r[0].error || r[1].error);
+      if (r[0].error || r[1].error || r[2].error) throw (r[0].error || r[1].error || r[2].error);
       // ids are stable client-generated UUIDs, so no reconciliation needed
       return pushChildren(owner);
     }).then(function () {
@@ -839,6 +873,9 @@
     childOps("bishopric_callings", "meeting_id", state.bishopric, function (m) {
       return (m.callings || []).filter(function (s){return s.name||s.calling;}).map(function (s) { return { name: s.name, calling: s.calling, status: s.status }; });
     });
+    childOps("council_counsel", "meeting_id", state.council, function (m) {
+      return (m.counsel || []).filter(function (s){return s.name||s.note;}).map(function (s) { return { name: s.name, note: s.note }; });
+    });
 
     // assignments (flat, owner-scoped): upsert existing uuids, insert new
     var upAsg = [], inAsg = [];
@@ -854,6 +891,24 @@
     inAsg.forEach(function (pair) {
       ops.push(sb.from("assignments").insert(pair.row).select().then(function (res) {
         if (res && res.error) throw new Error("assignments insert: " + res.error.message);
+        if (res.data && res.data[0]) pair.local.id = res.data[0].id;
+      }));
+    });
+
+    // council assignments (separate table, same pattern)
+    var upCAsg = [], inCAsg = [];
+    state.councilAssignments.forEach(function (a) {
+      var row = { owner: owner, assignee: a.who || "", what: a.what || "", status: a.status || "open",
+                  date_made: a.dateMade || null, date_done: a.dateDone || null,
+                  origin_meeting: isUuid(a.meetingId) ? a.meetingId : null };
+      if (isUuid(a.id)) { row.id = a.id; upCAsg.push(row); } else inCAsg.push({ local: a, row: row });
+    });
+    if (upCAsg.length) ops.push(sb.from("council_assignments").upsert(upCAsg).then(function (res) {
+      if (res && res.error) throw new Error("council_assignments upsert: " + res.error.message);
+    }));
+    inCAsg.forEach(function (pair) {
+      ops.push(sb.from("council_assignments").insert(pair.row).select().then(function (res) {
+        if (res && res.error) throw new Error("council_assignments insert: " + res.error.message);
         if (res.data && res.data[0]) pair.local.id = res.data[0].id;
       }));
     });
@@ -903,6 +958,49 @@
     state.assignments = state.assignments.filter(function (x) { return x.id !== id; }); save();
   }
   function todayISO() { var d = new Date(); d.setHours(0,0,0,0); return d.toISOString().slice(0,10); }
+
+  // ----- ward council meeting model -----
+  // Structured around the Handbook (29.2.5): the council counsels together to
+  // help members build spiritual strength, receive ordinances, keep covenants.
+  // The middle is the four missions (Live / Care / Invite / Unite) as
+  // coordination lanes, NOT round-robin auxiliary reports.
+  function blankCouncil() {
+    return {
+      id: uid(),
+      date: nextSundayISO(),
+      instruction: "",     // bishop's focus / what to teach or center on
+      counsel: [],         // [{id, name, note}] individuals & families
+      live: "",            // Live the gospel
+      care: "",            // Care for those in need
+      invite: "",          // Invite all to receive the gospel (missionary)
+      unite: "",           // Unite families for eternity (temple & family history)
+      coordination: "",    // programs / activities / calendar
+      notes: ""
+    };
+  }
+  function findCouncil(id) { return state.council.filter(function (m) { return m.id === id; })[0]; }
+
+  // ----- council assignments (separate pool, same carry-forward behavior) -----
+  function openCouncilAssignments() {
+    return state.councilAssignments.filter(function (a) { return a.status !== "done"; });
+  }
+  function councilAssignmentsForMeeting(mId) {
+    return state.councilAssignments.filter(function (a) {
+      return a.status !== "done" || a.meetingId === mId;
+    });
+  }
+  function addCouncilAssignment(who, what, mId) {
+    state.councilAssignments.push({ id: uid(), who: who || "", what: what || "", dateMade: todayISO(), meetingId: mId, status: "open" });
+    save();
+  }
+  function toggleCouncilAssignment(id) {
+    var a = state.councilAssignments.filter(function (x) { return x.id === id; })[0];
+    if (a) { a.status = (a.status === "done") ? "open" : "done"; a.dateDone = (a.status === "done") ? todayISO() : null; save(); }
+  }
+  function deleteCouncilAssignment(id) {
+    dbDelete("council_assignments", id);
+    state.councilAssignments = state.councilAssignments.filter(function (x) { return x.id !== id; }); save();
+  }
 
   function blankWeek() {
     return {
@@ -955,6 +1053,9 @@
     if (view.tab === "bishopric") {
       if (view.screen === "list") renderBishopricList(app);
       else renderBishopricEditor(app);
+    } else if (view.tab === "council") {
+      if (view.screen === "list") renderCouncilList(app);
+      else renderCouncilEditor(app);
     } else {
       if (view.screen === "list") renderList(app);
       else renderEditor(app);
@@ -968,7 +1069,7 @@
   }
   function tabBar() {
     var bar = el("div", "tabs");
-    var defs = [ ["sacrament", "Sacrament"], ["bishopric", "Bishopric"] ];
+    var defs = [ ["sacrament", "Sacrament"], ["bishopric", "Bishopric"], ["council", "Ward Council"] ];
     defs.forEach(function (d) {
       var t = el("button", "tab" + (view.tab === d[0] ? " active" : ""), d[1]);
       t.onclick = function () { view = { tab: d[0], screen: "list" }; render(); };
@@ -1647,7 +1748,377 @@
   }
 
 
-  // ---------- output helpers ----------
+  // ================= WARD COUNCIL =================
+  // Handbook 29.2.5: the council counsels together about God's work of
+  // salvation and exaltation. Built deliberately to resist status-reporting:
+  // the spine is carried-forward assignments + individuals/families to counsel
+  // about, and the middle is the four missions as coordination lanes.
+  var COUNCIL_MISSIONS = [
+    { key: "live",   title: "Live the gospel",            hint: "faith, worship, teaching, keeping covenants" },
+    { key: "care",   title: "Care for those in need",     hint: "welfare, ministering, self-reliance \u2014 names + status, no sensitive detail" },
+    { key: "invite", title: "Invite all to receive the gospel", hint: "missionary work, new & returning members, friends being taught" },
+    { key: "unite",  title: "Unite families for eternity", hint: "temple & family history, temple prep, ordinances" }
+  ];
+
+  function renderCouncilList(app) {
+    var head = el("div", "list-head");
+    head.appendChild(el("span", "eyebrow", "Ward council meetings"));
+    var addBtn = el("button", "btn-ghost", "+ new meeting");
+    addBtn.onclick = function () {
+      var m = blankCouncil();
+      state.council.push(m); save();
+      view = { tab: "council", screen: "editor", cmId: m.id }; render();
+    };
+    head.appendChild(addBtn);
+    app.appendChild(head);
+
+    var open = openCouncilAssignments();
+    if (open.length) {
+      var banner = el("div", "week-card");
+      banner.style.cssText = "cursor:default;border-color:var(--accent);background:var(--accent-soft);";
+      var bw = el("div", "week-when");
+      bw.appendChild(el("div", "week-date", open.length + " open assignment" + (open.length === 1 ? "" : "s")));
+      bw.appendChild(el("div", "week-meta", "carried forward until closed"));
+      banner.appendChild(bw);
+      app.appendChild(banner);
+    }
+
+    if (!state.council.length) {
+      app.appendChild(el("div", "empty", "No ward council meetings yet. Tap \u201c+ new meeting\u201d to start."));
+      return;
+    }
+    var mtgs = state.council.slice().sort(function (a, b) { return a.date.localeCompare(b.date); });
+    var upcoming = mtgs.filter(function (m) { return !isPast(m.date); });
+    var past = mtgs.filter(function (m) { return isPast(m.date); }).reverse();
+
+    function buildMtgCard(m) {
+      var card = el("div", "week-card");
+      var when = el("div", "week-when");
+      when.appendChild(el("div", "week-date", fmtShort(m.date)));
+      var bits = [];
+      var made = state.councilAssignments.filter(function (a) { return a.meetingId === m.id; }).length;
+      if (made) bits.push(made + " assignment" + (made === 1 ? "" : "s") + " made");
+      if ((m.counsel || []).length) bits.push((m.counsel.length) + " to counsel");
+      when.appendChild(el("div", "week-meta", bits.join(" \u00b7 ") || "not filled in yet"));
+      card.appendChild(when);
+      card.appendChild(el("span", "week-tag" + (isPast(m.date) ? " past" : ""), isPast(m.date) ? "past" : "upcoming"));
+      card.onclick = function () { view = { tab: "council", screen: "editor", cmId: m.id }; render(); };
+      return card;
+    }
+
+    if (!upcoming.length && past.length) {
+      app.appendChild(el("div", "empty", "Nothing upcoming. Tap \u201c+ new meeting\u201d to start."));
+    }
+    upcoming.forEach(function (m) { app.appendChild(buildMtgCard(m)); });
+    renderArchive(app, past, "council", buildMtgCard);
+  }
+
+  function renderCouncilEditor(app) {
+    var m = findCouncil(view.cmId);
+    if (!m) { view = { tab: "council", screen: "list" }; return render(); }
+
+    var back = el("button", "back-link", "\u2039 all meetings");
+    back.onclick = function () { save(); view = { tab: "council", screen: "list" }; render(); };
+    app.appendChild(back);
+
+    function zoneHead(z, title, who, badgeText, badgeClass) {
+      var zh = el("div", "zone-head");
+      zh.appendChild(el("h2", null, title));
+      if (who) zh.appendChild(el("span", "who", who));
+      if (badgeText) zh.appendChild(el("span", "zone-badge " + badgeClass, badgeText));
+      z.appendChild(zh);
+    }
+    function textField(host, getVal, setVal, opts) {
+      opts = opts || {};
+      var f = el("div", "field");
+      if (opts.label) f.appendChild(el("label", null, opts.label));
+      var input = opts.area ? el("textarea") : el("input");
+      if (!opts.area) input.type = "text";
+      if (opts.area && opts.rows) input.rows = opts.rows;
+      input.value = getVal() || "";
+      if (opts.placeholder) input.placeholder = opts.placeholder;
+      input.oninput = function () { setVal(input.value); save(); };
+      f.appendChild(input);
+      if (opts.hint) f.appendChild(el("div", "hint", opts.hint));
+      host.appendChild(f);
+      return input;
+    }
+
+    // ===== date =====
+    var z0 = el("div", "zone");
+    zoneHead(z0, "This meeting", null, "private", "badge-private");
+    var df = el("div", "field");
+    df.appendChild(el("label", null, "date"));
+    var dinput = el("input"); dinput.type = "date"; dinput.value = m.date;
+    dinput.onchange = function () { m.date = dinput.value; save(); };
+    df.appendChild(dinput); z0.appendChild(df);
+    app.appendChild(z0);
+
+    // ===== ASSIGNMENTS (the engine, council pool) =====
+    var zA = el("div", "zone");
+    zoneHead(zA, "Assignments", "carried until done");
+    var list = councilAssignmentsForMeeting(m.id).sort(function (a, b) {
+      if ((a.status === "done") !== (b.status === "done")) return a.status === "done" ? 1 : -1;
+      return (a.dateMade || "").localeCompare(b.dateMade || "");
+    });
+    if (!list.length) {
+      zA.appendChild(el("div", "hint", "No open assignments. Add the first below \u2014 it\u2019ll carry to every meeting until you check it done."));
+    }
+    list.forEach(function (a) {
+      var row = el("div", "asg" + (a.status === "done" ? " done" : ""));
+      var chk = el("div", "asg-check", a.status === "done" ? "\u2713" : "");
+      chk.onclick = function () { toggleCouncilAssignment(a.id); render(); };
+      row.appendChild(chk);
+      var body = el("div", "asg-body");
+      body.appendChild(el("div", "asg-what", a.what || "(no description)"));
+      var meta = [];
+      if (a.who) meta.push(a.who);
+      meta.push("since " + fmtShort(a.dateMade));
+      body.appendChild(el("div", "asg-meta", meta.join(" \u00b7 ")));
+      row.appendChild(body);
+      var del = el("button", "asg-del", "\u00d7");
+      del.onclick = function () { deleteCouncilAssignment(a.id); render(); };
+      row.appendChild(del);
+      zA.appendChild(row);
+    });
+    var addWrap = el("div", "asg-add");
+    var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
+    whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;";
+    whoIn.setAttribute("list", "dl-council-assignees"); whoIn.setAttribute("autocomplete", "off");
+    var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
+    whatIn.style.cssText = whoIn.style.cssText;
+    var addBtn = el("button", "btn", "Add");
+    addBtn.classList.add("asg-add-full");
+    addBtn.onclick = function () {
+      if (!whatIn.value.trim() && !whoIn.value.trim()) return;
+      addCouncilAssignment(whoIn.value.trim(), whatIn.value.trim(), m.id);
+      render();
+    };
+    addWrap.appendChild(whoIn); addWrap.appendChild(whatIn); addWrap.appendChild(addBtn);
+    zA.appendChild(addWrap);
+    app.appendChild(zA);
+
+    // ===== INSTRUCTION / FOCUS =====
+    var zI = el("div", "zone");
+    zoneHead(zI, "Instruction & focus", "set the direction");
+    textField(zI, function () { return m.instruction; }, function (v) { m.instruction = v; }, { area: true, rows: 2, hint: "what to teach or center the council on \u2014 a scripture, a handbook item, one priority" });
+    app.appendChild(zI);
+
+    // ===== COUNSEL TOGETHER =====
+    var zC = el("div", "zone");
+    zoneHead(zC, "Counsel together", "who needs us");
+    zC.appendChild(el("div", "hint", "Individuals and families the council should counsel about. Names and a short note \u2014 not sensitive detail."));
+    (m.counsel || []).forEach(function (c, i) {
+      var row = el("div", "counsel-row");
+      var nf = el("div", "field"); nf.style.marginBottom = "6px";
+      nf.appendChild(el("label", null, "name"));
+      var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
+      ni.oninput = function () { c.name = ni.value; save(); };
+      autofill(ni, "dl-names", gentleName, function (v) { c.name = v; save(); });
+      nf.appendChild(ni); row.appendChild(nf);
+      var notef = el("div", "field"); notef.style.marginBottom = "0";
+      notef.appendChild(el("label", null, "note"));
+      var noti = el("input"); noti.type = "text"; noti.value = c.note || "";
+      noti.oninput = function () { c.note = noti.value; save(); };
+      notef.appendChild(noti); row.appendChild(notef);
+      var rm = el("button", "danger", "remove");
+      rm.onclick = function () { m.counsel.splice(i, 1); save(); render(); };
+      row.appendChild(rm);
+      zC.appendChild(row);
+    });
+    var addC = el("button", "add-line", "+ add person / family");
+    addC.onclick = function () { if (!m.counsel) m.counsel = []; m.counsel.push({ id: uid(), name: "", note: "" }); save(); render(); };
+    zC.appendChild(addC);
+    app.appendChild(zC);
+
+    // ===== THE WORK OF SALVATION & EXALTATION (four missions) =====
+    var zW = el("div", "zone");
+    zoneHead(zW, "Work of salvation & exaltation", "coordinate, don\u2019t report");
+    zW.appendChild(el("div", "hint", "Coordination across the four missions of the Church \u2014 what the council is doing together, not organization-by-organization status."));
+    COUNCIL_MISSIONS.forEach(function (mi) {
+      zW.appendChild(el("div", "sub-label", mi.title));
+      textField(zW, function () { return m[mi.key]; }, function (v) { m[mi.key] = v; }, { area: true, rows: 2, hint: mi.hint });
+    });
+    app.appendChild(zW);
+
+    // ===== COORDINATION & CALENDAR =====
+    var zCo = el("div", "zone");
+    zoneHead(zCo, "Coordination & calendar");
+    textField(zCo, function () { return m.coordination; }, function (v) { m.coordination = v; }, { area: true, rows: 2, hint: "programs, activities, upcoming dates \u2014 one per line" });
+    app.appendChild(zCo);
+
+    // ===== NOTES =====
+    var zN = el("div", "zone");
+    zoneHead(zN, "Notes & instruction");
+    textField(zN, function () { return m.notes; }, function (v) { m.notes = v; }, { area: true, rows: 3, hint: "open notes" });
+    app.appendChild(zN);
+
+    // ===== outputs =====
+    var out = el("div", "out-bar");
+    var b1 = el("button", "btn", "Agenda");
+    b1.onclick = function () { openSheet(buildCouncilAgenda(m)); };
+    var b2 = el("button", "btn secondary", "Follow-up");
+    b2.onclick = function () { openSheet(buildCouncilFollowUp(m)); };
+    out.appendChild(b1); out.appendChild(b2);
+    app.appendChild(out);
+
+    var del = el("button", "danger", "delete this meeting");
+    del.style.cssText += "display:block;margin:14px auto 0;";
+    del.onclick = function () {
+      if (del.dataset.armed === "1") {
+        dbDelete("council_meetings", m.id);
+        state.council = state.council.filter(function (x) { return x.id !== m.id; });
+        save(); view = { tab: "council", screen: "list" }; render(); return;
+      }
+      del.dataset.armed = "1"; del.textContent = "tap again to delete";
+      setTimeout(function () { if (del) { del.dataset.armed = "0"; del.textContent = "delete this meeting"; } }, 2500);
+    };
+    app.appendChild(del);
+  }
+
+  // ---- ward council agenda (one page, assignments up top) ----
+  function buildCouncilAgenda(m) {
+    var doc = document.createDocumentFragment();
+    var cs = el("div", "cs");
+    doc.appendChild(cs);
+    cs.appendChild(el("div", "cs-title", "Ward Council Agenda"));
+    cs.appendChild(el("div", "cs-sub", WARD));
+    cs.appendChild(el("div", "cs-date", fmtDate(m.date)));
+
+    // open assignments first
+    var open = councilAssignmentsForMeeting(m.id).filter(function (a) { return a.status !== "done"; });
+    var sA = el("div", "cs-sec");
+    sA.appendChild(el("div", "cs-h", "Open Assignments \u2014 Follow Up"));
+    sA.appendChild(el("hr", "cs-hrule"));
+    if (!open.length) {
+      sA.appendChild(el("div", "cs-note", "None open. Clean slate."));
+    } else {
+      open.forEach(function (a) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        var t = el("span");
+        if (a.who) { t.appendChild(el("strong", null, a.who + ": ")); }
+        t.appendChild(document.createTextNode(a.what + "  "));
+        t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")"));
+        line.appendChild(t);
+        sA.appendChild(line);
+      });
+    }
+    cs.appendChild(sA);
+
+    // instruction / focus
+    if (m.instruction) {
+      var sI = el("div", "cs-sec");
+      sI.appendChild(el("div", "cs-h", "Instruction & Focus"));
+      sI.appendChild(el("hr", "cs-hrule"));
+      lines(m.instruction).forEach(function (l) { sI.appendChild(el("div", "cs-note", l)); });
+      cs.appendChild(sI);
+    }
+
+    // counsel together
+    if ((m.counsel || []).filter(function (c) { return c.name; }).length) {
+      var sC = el("div", "cs-sec");
+      sC.appendChild(el("div", "cs-h", "Counsel Together"));
+      sC.appendChild(el("hr", "cs-hrule"));
+      m.counsel.forEach(function (c) {
+        if (!c.name) return;
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        var t = el("span");
+        t.appendChild(el("strong", null, c.name));
+        if (c.note) { t.appendChild(document.createTextNode(" \u2014 ")); t.appendChild(el("span", "cs-topic", c.note)); }
+        line.appendChild(t);
+        sC.appendChild(line);
+      });
+      cs.appendChild(sC);
+    }
+
+    // four missions
+    var anyMission = COUNCIL_MISSIONS.some(function (mi) { return m[mi.key]; });
+    if (anyMission) {
+      var sM = el("div", "cs-sec");
+      sM.appendChild(el("div", "cs-h", "Work of Salvation & Exaltation"));
+      sM.appendChild(el("hr", "cs-hrule"));
+      COUNCIL_MISSIONS.forEach(function (mi) {
+        if (!m[mi.key]) return;
+        sM.appendChild(el("div", "cs-mission-h", mi.title));
+        lines(m[mi.key]).forEach(function (l) {
+          var line = el("div", "cs-checkline");
+          line.appendChild(el("span", "cs-box", "\u25a1"));
+          line.appendChild(el("span", null, l));
+          sM.appendChild(line);
+        });
+      });
+      cs.appendChild(sM);
+    }
+
+    // coordination & calendar
+    if (m.coordination) {
+      var sCo = el("div", "cs-sec");
+      sCo.appendChild(el("div", "cs-h", "Coordination & Calendar"));
+      sCo.appendChild(el("hr", "cs-hrule"));
+      lines(m.coordination).forEach(function (l) {
+        var line = el("div", "cs-checkline");
+        line.appendChild(el("span", "cs-box", "\u25a1"));
+        line.appendChild(el("span", null, l));
+        sCo.appendChild(line);
+      });
+      cs.appendChild(sCo);
+    }
+
+    // notes
+    if (m.notes) {
+      var sN = el("div", "cs-sec");
+      sN.appendChild(el("div", "cs-h", "Notes"));
+      sN.appendChild(el("hr", "cs-hrule"));
+      lines(m.notes).forEach(function (l) { sN.appendChild(el("div", "cs-note", l)); });
+      cs.appendChild(sN);
+    }
+
+    var wrap = el("div"); wrap.appendChild(doc); return wrap;
+  }
+
+  // ---- ward council follow-up (open assignments grouped by person) ----
+  function buildCouncilFollowUp(m) {
+    var doc = document.createDocumentFragment();
+    var cs = el("div", "cs");
+    doc.appendChild(cs);
+    cs.appendChild(el("div", "cs-title", "Council Assignments \u2014 Follow-Up"));
+    cs.appendChild(el("div", "cs-sub", WARD + "  \u00b7  from meeting " + fmtShort(m.date)));
+    cs.appendChild(el("div", "cs-date", "Sent " + fmtDate(todayISO())));
+
+    var open = openCouncilAssignments();
+    if (!open.length) {
+      cs.appendChild(el("div", "cs-note", "No open assignments. Everything\u2019s closed out \u2014 nice work."));
+      var w0 = el("div"); w0.appendChild(doc); return w0;
+    }
+    var byPerson = {};
+    var order = [];
+    open.forEach(function (a) {
+      var key = a.who && a.who.trim() ? a.who.trim() : "Unassigned";
+      if (!byPerson[key]) { byPerson[key] = []; order.push(key); }
+      byPerson[key].push(a);
+    });
+    order.sort(function (a, b) { if (a === "Unassigned") return 1; if (b === "Unassigned") return -1; return a.localeCompare(b); });
+
+    order.forEach(function (name) {
+      var block = el("div", "fu-person");
+      block.appendChild(el("div", "fu-name", name));
+      byPerson[name].forEach(function (a) {
+        var item = el("div", "fu-item");
+        item.appendChild(el("span", "fu-box", "\u25a1"));
+        var t = el("span");
+        t.appendChild(document.createTextNode(a.what || "(assignment)"));
+        if (a.meetingId === m.id) t.appendChild(el("span", "fu-new", "new"));
+        else { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(since " + fmtShort(a.dateMade) + ")")); }
+        item.appendChild(t);
+        block.appendChild(item);
+      });
+      cs.appendChild(block);
+    });
+
+    var wrap = el("div"); wrap.appendChild(doc); return wrap;
+  }
   function lines(str) { return (str || "").split(/\r?\n/).map(function (s) { return s.trim(); }).filter(Boolean); }
   function docLine(label, val) {
     if (!val) return null;
