@@ -228,6 +228,7 @@
   .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
   .cs-note { font-size: 13px; color: #666; margin: 3px 0; }
   .cs-mission-h { font-family: var(--sans); font-size: 12px; font-weight: 700; color: #1c2430; margin: 8px 0 3px; }
+  .cs-caption { font-family: var(--sans); font-size: 10.5px; font-style: italic; letter-spacing: .02em; color: #999; margin: -2px 0 5px; }
   .cs-checkline { display: flex; gap: 8px; padding: 3px 0; font-size: 14.5px; }
   .cs-checkline .cs-box { color: #111; font-weight: 700; }
 
@@ -294,6 +295,18 @@
     }
     .sheet-scroll { padding: 0 !important; overflow: visible !important; height: auto !important; }
     .doc { border: none !important; box-shadow: none !important; border-radius: 0; padding: 0.25in 0.45in; max-width: none !important; margin: 0 !important; background: #fff !important; }
+    /* Compress the agenda's vertical rhythm in print so a normal week's agenda
+       collapses onto one page instead of spilling a mostly-empty second sheet.
+       (Only affects the single-doc sheets; the flat pair path has its own.) */
+    #sheetDoc .cs-title { margin: 0 0 1px !important; }
+    #sheetDoc .cs-sub { margin: 0 !important; }
+    #sheetDoc .cs-date { margin: 3px 0 12px !important; }
+    #sheetDoc .cs-sec { margin: 0 0 9px !important; }
+    #sheetDoc .cs-hrule { margin: 0 0 5px !important; }
+    #sheetDoc .cs-checkline { padding: 2px 0 !important; }
+    #sheetDoc .cs-note { margin: 2px 0 !important; }
+    #sheetDoc .cs-mission-h { margin: 6px 0 2px !important; }
+    #sheetDoc .cs-caption { margin: -1px 0 4px !important; }
     /* Keep atomic units together (a single row, a vote box, a checkline) but
        let a long SECTION flow across a page boundary rather than jumping the
        whole thing to the next page and leaving a blank gap. Also keep a section
@@ -388,7 +401,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.29";
+  var APP_VERSION = "Pioneer Farms v1.0.30";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2167,6 +2180,7 @@
     if (anyMission) {
       var sM = el("div", "cs-sec");
       sM.appendChild(el("div", "cs-h", "Work of Salvation & Exaltation"));
+      sM.appendChild(el("div", "cs-caption", "coordinate, don\u2019t report"));
       sM.appendChild(el("hr", "cs-hrule"));
       COUNCIL_MISSIONS.forEach(function (mi) {
         if (!m[mi.key]) return;
