@@ -273,8 +273,15 @@
   .cs-say { border-left: 3px solid #111; background: #f6f7f9; padding: 8px 12px; margin: 7px 0; font-size: 14.5px; line-height: 1.5; }
   .cs-say .cs-cue { display: block; font-family: var(--sans); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #666; margin-bottom: 3px; }
   .cs-say .cs-names { font-weight: 700; color: #111; }
-  .cs-namegrid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; row-gap: 0; }
+  /* Name lists: single column by default (correct on a narrow phone). Two
+     columns only when there's real width — the PDF capture clone (fixed wide)
+     always gets two, and wide screens get two via the media query below. */
+  .cs-namegrid { display: grid; grid-template-columns: 1fr; column-gap: 18px; row-gap: 0; }
   .cs-namegrid.one-col { grid-template-columns: 1fr; }
+  .pdf-capture .cs-namegrid:not(.one-col) { grid-template-columns: 1fr 1fr; }
+  @media (min-width: 560px) {
+    .cs-namegrid:not(.one-col) { grid-template-columns: 1fr 1fr; }
+  }
   .cs-say .cs-quote { color: #1c2430; }
   .cs-say .cs-quote + .cs-checkline { margin-top: 5px; }
   .cs-say .cs-checkline + .cs-quote { margin-top: 6px; }
@@ -458,7 +465,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.49";
+  var APP_VERSION = "Pioneer Farms v1.0.51";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2845,6 +2852,7 @@
   // rounded corners). Returns the temp element; caller removes it after capture.
   function pdfRenderClone(node) {
     var page = document.createElement("div");
+    page.className = "pdf-capture";
     page.style.cssText =
       "position:fixed;left:-10000px;top:0;width:816px;" +   // 8.5in @ 96dpi
       "box-sizing:border-box;padding:48px 58px;background:#fff;" +
@@ -2903,20 +2911,23 @@
         // Width-fit height (what it'd be if we filled the page width).
         var widthFitH = canvas.height * (availW / canvas.width);
 
-        if (widthFitH <= availH) {
-          // Fits on one page: scale to fit, centered, so a short program never
-          // spills. Constrain by whichever dimension is limiting.
+        // Tolerance: if content is within ~4% of one page, treat it as one page
+        // and scale to fit. Prevents a few points of trailing whitespace from
+        // spilling into a near-blank second page.
+        if (widthFitH <= availH * 1.04) {
           var scale = Math.min(availW / canvas.width, availH / canvas.height);
           var w = canvas.width * scale;
           var h = canvas.height * scale;
           pdf.addImage(img, "PNG", (pw - w) / 2, margin, w, h);
         } else {
-          // Genuinely taller than one page (e.g. a long conducting brief):
-          // fill width and slice across pages at page-height boundaries.
+          // Genuinely taller than one page: fill width and slice across pages.
           var pxPerPt = canvas.width / availW;
           var sliceH = availH;
+          // ignore a trailing sliver smaller than ~5% of a page so we never emit
+          // an almost-empty final page.
+          var minTail = availH * 0.05;
           var remaining = widthFitH, srcY = 0, first = true;
-          while (remaining > 0.5) {
+          while (remaining > minTail) {
             if (!first) pdf.addPage();
             first = false;
             var thisH = Math.min(sliceH, remaining);
