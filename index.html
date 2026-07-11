@@ -456,7 +456,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.45";
+  var APP_VERSION = "Pioneer Farms v1.0.46";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -864,7 +864,7 @@
         openingHymn: m.opening_hymn || "", sacramentHymn: m.sacrament_hymn || "",
         restHymn: m.rest_hymn || "", closingHymn: m.closing_hymn || "",
         invocation: m.invocation || "", benediction: m.benediction || "",
-        musical: m.musical || "", blessings: m.blessings || "",
+        musical: m.musical || "", blessings: m.blessings || "", moveins: m.moveins || "",
         youthSpeaker: m.youth_speaker || "", youthTopic: m.youth_topic || "",
         youthShown: m.youth_shown !== false, testimony: !!m.testimony,
         announcements: m.announcements || "", showSacramentBlock: m.show_sacrament_block !== false,
@@ -928,7 +928,7 @@
         opening_hymn: w.openingHymn, sacrament_hymn: w.sacramentHymn,
         rest_hymn: w.restHymn, closing_hymn: w.closingHymn,
         invocation: w.invocation, benediction: w.benediction,
-        musical: w.musical, blessings: w.blessings,
+        musical: w.musical, blessings: w.blessings, moveins: w.moveins,
         youth_speaker: w.youthSpeaker, youth_topic: w.youthTopic,
         youth_shown: w.youthShown, testimony: w.testimony,
         announcements: w.announcements, show_sacrament_block: w.showSacramentBlock,
@@ -1160,6 +1160,7 @@
       invocation: "", benediction: "",
       musical: "",
       blessings: "",
+      moveins: "",
       speakers: [ { name: "", topic: "" }, { name: "", topic: "" } ],
       youthSpeaker: "", youthTopic: "", youthShown: true,
       testimony: false,
@@ -1489,6 +1490,12 @@
     zoneHead(zO, "Ordinances", null, "conducting", "badge-private");
     bindText(zO, "blessings", { label: "blessings & confirmations", hint: "baptisms, confirmations, ordinations \u2014 announced from the stand; prints on the conducting sheet" });
     app.appendChild(zO);
+
+    // ===== Move-in records (conducting cue) =====
+    var zMI = el("div", "zone");
+    zoneHead(zMI, "Move-in records", null, "conducting", "badge-private");
+    bindText(zMI, "moveins", { label: "new records received", hint: "names of members whose records arrived \u2014 read as a welcome from the stand; prints on the conducting sheet" });
+    app.appendChild(zMI);
 
     // ===== Ward business (private) =====
     var z2 = el("div", "zone");
@@ -2620,6 +2627,19 @@
         line.appendChild(el("span", null, l));
         sBl.appendChild(line);
       });
+    }
+
+    // ---- MOVE-IN RECORDS (welcome from the stand) ----
+    if (w.moveins) {
+      var names = lines(w.moveins);
+      var sMI = csSection(cs, "Move-in Records");
+      sMI.appendChild(csSay("Welcome from the stand", function (box) {
+        var joined = names.length === 1 ? names[0]
+          : names.slice(0, -1).join(", ") + (names.length > 1 ? " and " + names[names.length - 1] : "");
+        box.appendChild(el("div", "cs-quote",
+          "\u201cWe\u2019ve received the following records and would like to welcome " + joined +
+          " to the " + WARD + ".\u201d"));
+      }));
     }
 
     // ---- TESTIMONY MEETING (conductor cue; not a program item) ----
