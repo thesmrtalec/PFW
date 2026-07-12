@@ -222,6 +222,30 @@
   .cue-tap { position: absolute; top: 60px; bottom: 0; width: 38%; z-index: 2; }
   .cue-tap-left { left: 0; }
   .cue-tap-right { right: 0; }
+
+  /* ---- timers: prompt, not cop ---- */
+  .cue-clock { font-family: var(--mono); font-size: 13px; color: #5f6875; min-width: 52px; text-align: right; }
+  .cue-clock.warn { color: #d9a441; }
+  .cue-clock.over { color: #d97a6c; }
+  .cue-footer { display: none; align-items: center; gap: 14px; padding: 0 20px 18px; position: relative; z-index: 3; }
+  .cue-footer.on { display: flex; }
+  .cue-itemtime { flex: 1; font-family: var(--mono); font-size: 13px; color: #4a525e; }
+  .cue-itemtime.warn { color: #d9a441; }
+  .cue-itemtime.over { color: #d97a6c; }
+  .cue-park { background: transparent; border: 1px solid rgba(255,255,255,.14); color: #8b95a5; border-radius: 999px; padding: 7px 15px; font-size: 13px; }
+  .cue-park:active { border-color: #8fb0a8; color: #8fb0a8; }
+  .cue-parked-note { font-size: 15px; color: #8fb0a8; margin-top: 18px; }
+
+  /* ---- setup: pick the session + item budget ---- */
+  .cue-setup { position: fixed; inset: 0; background: #12151a; z-index: 210; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .cue-setup.open { display: flex; }
+  .cue-setup-panel { width: 100%; max-width: 420px; color: #e6e9ee; text-align: center; }
+  .cue-setup-title { font-family: var(--serif); font-size: 22px; margin-bottom: 14px; }
+  .cue-setup-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .cue-chip { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12); color: #cdd3dc; border-radius: 999px; padding: 10px 18px; font-size: 15px; }
+  .cue-chip.sel { background: #8fb0a8; border-color: #8fb0a8; color: #12151a; font-weight: 700; }
+  .cue-setup-go { width: 100%; margin-top: 28px; background: #8fb0a8; color: #12151a; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 700; }
+  .cue-setup-skip { display: block; width: 100%; margin-top: 12px; background: transparent; border: none; color: #5f6875; font-size: 13px; }
   /* Cast / big-screen: scale the type way up so a room can read it. */
   @media (min-width: 900px) {
     .cue-card { max-width: 1100px; }
@@ -486,10 +510,26 @@
   <div class="cue-topbar">
     <button class="cue-close" id="cueClose">&times;</button>
     <div class="cue-progress" id="cueProgress"></div>
+    <div class="cue-clock" id="cueClock"></div>
   </div>
   <div class="cue-stage" id="cueStage"></div>
   <div class="cue-tap cue-tap-left" id="cueTapLeft"></div>
   <div class="cue-tap cue-tap-right" id="cueTapRight"></div>
+  <div class="cue-footer" id="cueFooter">
+    <div class="cue-itemtime" id="cueItemTime"></div>
+    <button class="cue-park" id="cuePark">park it &rsaquo;</button>
+  </div>
+</div>
+
+<div class="cue-setup" id="cueSetup">
+  <div class="cue-setup-panel">
+    <div class="cue-setup-title">How long is this meeting?</div>
+    <div class="cue-setup-row" id="cueSetupMins"></div>
+    <div class="cue-setup-title" style="margin-top:22px;">Minutes per item</div>
+    <div class="cue-setup-row" id="cueSetupBudget"></div>
+    <button class="btn cue-setup-go" id="cueSetupGo">Start</button>
+    <button class="cue-setup-skip" id="cueSetupSkip">no timer, just cards</button>
+  </div>
 </div>
 
 <div class="hp-overlay" id="hpOverlay">
@@ -515,7 +555,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.61";
+  var APP_VERSION = "Pioneer Farms v1.1.00";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2936,6 +2976,33 @@
   }
 
   var cueState = { cards: [], i: 0 };
+  // ---- timer state (agenda decks only; a sacrament meeting isn't timeboxed) ----
+  var cueTimer = {
+    on: false, sessionMs: 0, budgetMs: 0,
+    startedAt: 0, cardStartedAt: 0, tick: null,
+    parked: []   // cards deliberately sent to the back
+  };
+  function fmtMMSS(ms) {
+    var neg = ms < 0; ms = Math.abs(ms);
+    var s = Math.floor(ms / 1000), m = Math.floor(s / 60);
+    return (neg ? "-" : "") + m + ":" + String(s % 60).padStart(2, "0");
+  }
+  function cueTick() {
+    if (!cueTimer.on) return;
+    var now = Date.now();
+    var left = cueTimer.sessionMs - (now - cueTimer.startedAt);
+    var clock = document.getElementById("cueClock");
+    clock.textContent = fmtMMSS(left);
+    clock.className = "cue-clock" + (left < 0 ? " over" : (left < 5 * 60000 ? " warn" : ""));
+    var spent = now - cueTimer.cardStartedAt;
+    var it = document.getElementById("cueItemTime");
+    it.textContent = fmtMMSS(spent) + " on this";
+    var over = cueTimer.budgetMs && spent > cueTimer.budgetMs;
+    var near = cueTimer.budgetMs && spent > cueTimer.budgetMs * 0.8;
+    it.className = "cue-itemtime" + (over ? " over" : (near ? " warn" : ""));
+  }
+  function cueResetCardClock() { cueTimer.cardStartedAt = Date.now(); cueTick(); }
+
   function renderCueCard() {
     var stage = document.getElementById("cueStage");
     var c = cueState.cards[cueState.i];
@@ -2969,6 +3036,7 @@
     }
     if (c.after) { var af = el("div", "cue-script"); af.style.marginTop = "22px"; af.textContent = c.after; card.appendChild(af); }
     if (c.sub) card.appendChild(el("div", "cue-sub", c.sub));
+    if (c.parked) card.appendChild(el("div", "cue-parked-note", "\u21ba came back to this"));
     stage.appendChild(card);
     var prog = document.getElementById("cueProgress");
     prog.innerHTML = "";
@@ -2976,16 +3044,86 @@
       prog.appendChild(el("div", "cue-dot" + (idx === cueState.i ? " active" : "")));
     });
   }
-  function cueNext() { if (cueState.i < cueState.cards.length - 1) { cueState.i++; renderCueCard(); } }
-  function cuePrev() { if (cueState.i > 0) { cueState.i--; renderCueCard(); } }
-  function openCueDeck(cards) {
+  function cueNext() {
+    if (cueState.i < cueState.cards.length - 1) { cueState.i++; cueResetCardClock(); renderCueCard(); }
+  }
+  function cuePrev() {
+    if (cueState.i > 0) { cueState.i--; cueResetCardClock(); renderCueCard(); }
+  }
+  // Park it: YOU send this card to the back — the timer never does it for you.
+  // Parked cards resurface at the end so nothing quietly disappears.
+  function cuePark() {
+    if (cueState.cards.length < 2) return;
+    var c = cueState.cards.splice(cueState.i, 1)[0];
+    c.parked = true;
+    cueState.cards.push(c);
+    if (cueState.i >= cueState.cards.length) cueState.i = cueState.cards.length - 1;
+    cueResetCardClock();
+    renderCueCard();
+  }
+
+  function startCueTimer(sessionMin, budgetMin) {
+    cueTimer.on = true;
+    cueTimer.sessionMs = sessionMin * 60000;
+    cueTimer.budgetMs = budgetMin * 60000;
+    cueTimer.startedAt = Date.now();
+    cueTimer.cardStartedAt = Date.now();
+    document.getElementById("cueFooter").classList.add("on");
+    document.getElementById("cueClock").style.display = "";
+    if (cueTimer.tick) clearInterval(cueTimer.tick);
+    cueTimer.tick = setInterval(cueTick, 1000);
+    cueTick();
+  }
+  function stopCueTimer() {
+    cueTimer.on = false;
+    if (cueTimer.tick) { clearInterval(cueTimer.tick); cueTimer.tick = null; }
+    document.getElementById("cueFooter").classList.remove("on");
+    document.getElementById("cueClock").textContent = "";
+  }
+
+  function openCueDeck(cards, timed) {
     cueState.cards = cards || [];
     cueState.i = 0;
+    stopCueTimer();
     renderCueCard();
     document.getElementById("cueOverlay").classList.add("open");
+    if (timed) showCueSetup();
   }
-  function openCueCards(w) { openCueDeck(buildCueCards(w)); }
-  document.getElementById("cueClose").onclick = function () { document.getElementById("cueOverlay").classList.remove("open"); };
+  function openCueCards(w) { openCueDeck(buildCueCards(w), false); }
+
+  // ---- setup: choose session length + per-item budget ----
+  var cueSetupPick = { session: 60, budget: 5 };
+  function showCueSetup() {
+    var mins = [30, 45, 60, 90], budgets = [3, 5, 8, 10];
+    var rowM = document.getElementById("cueSetupMins");
+    var rowB = document.getElementById("cueSetupBudget");
+    function build(row, opts, key, suffix) {
+      row.innerHTML = "";
+      opts.forEach(function (v) {
+        var b = el("button", "cue-chip" + (cueSetupPick[key] === v ? " sel" : ""), v + suffix);
+        b.onclick = function () { cueSetupPick[key] = v; build(row, opts, key, suffix); };
+        row.appendChild(b);
+      });
+    }
+    build(rowM, mins, "session", "m");
+    build(rowB, budgets, "budget", "m");
+    document.getElementById("cueSetup").classList.add("open");
+  }
+  document.getElementById("cueSetupGo").onclick = function () {
+    document.getElementById("cueSetup").classList.remove("open");
+    startCueTimer(cueSetupPick.session, cueSetupPick.budget);
+  };
+  document.getElementById("cueSetupSkip").onclick = function () {
+    document.getElementById("cueSetup").classList.remove("open");
+    stopCueTimer();
+  };
+  document.getElementById("cuePark").onclick = cuePark;
+
+  document.getElementById("cueClose").onclick = function () {
+    stopCueTimer();
+    document.getElementById("cueSetup").classList.remove("open");
+    document.getElementById("cueOverlay").classList.remove("open");
+  };
   document.getElementById("cueTapRight").onclick = cueNext;
   document.getElementById("cueTapLeft").onclick = cuePrev;
   document.addEventListener("keydown", function (e) {
@@ -3007,9 +3145,11 @@
   document.getElementById("sheetCue").onclick = function () {
     if (!currentSheet || !currentSheet.data) return;
     var t = currentSheet.type, d = currentSheet.data;
-    if (t === "agenda") openCueDeck(buildBishopricCueCards(d));
-    else if (t === "council-agenda") openCueDeck(buildCouncilCueCards(d));
-    else openCueDeck(buildCueCards(d));
+    // Agendas are timeboxed meetings -> offer the clock. A sacrament meeting
+    // isn't run against a per-item budget, so those cards open untimed.
+    if (t === "agenda") openCueDeck(buildBishopricCueCards(d), true);
+    else if (t === "council-agenda") openCueDeck(buildCouncilCueCards(d), true);
+    else openCueDeck(buildCueCards(d), false);
   };
 
   function openSheet(node) {
