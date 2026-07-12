@@ -203,10 +203,10 @@
     padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
   .cue-overlay.open { display: flex; }
   .cue-topbar { display: flex; align-items: center; gap: 12px; padding: 14px 18px 6px; position: relative; z-index: 3; }
-  .cue-close { background: rgba(255,255,255,.1); border: none; color: #cdd3dc; font-size: 15px; padding: 8px 14px; border-radius: 999px; }
-  .cue-progress { flex: 1; display: flex; gap: 5px; justify-content: center; }
-  .cue-dot { width: 7px; height: 7px; border-radius: 999px; background: rgba(255,255,255,.22); transition: background .2s, width .2s; }
-  .cue-dot.active { background: #8fb0a8; width: 20px; }
+  .cue-close { background: transparent; border: none; color: #4a525e; font-size: 26px; line-height: 1; padding: 6px 10px; }
+  .cue-progress { flex: 1; display: flex; gap: 4px; justify-content: center; }
+  .cue-dot { width: 5px; height: 5px; border-radius: 999px; background: rgba(255,255,255,.12); transition: background .2s, width .2s; }
+  .cue-dot.active { background: rgba(143,176,168,.55); width: 14px; }
   .cue-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 12px 28px 28px; position: relative; z-index: 1; overflow-y: auto; }
   .cue-card { width: 100%; max-width: 620px; color: #f2f4f7; animation: cueIn .18s ease; }
   @keyframes cueIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -219,10 +219,9 @@
   .cue-sub { font-size: 16px; color: #9aa3b2; margin-top: 4px; }
   .cue-card-quote { text-align: center; }
   .cue-quote { font-family: var(--serif); font-size: 30px; line-height: 1.4; color: #f2f4f7; }
-  .cue-tap { position: absolute; top: 60px; bottom: 40px; width: 38%; z-index: 2; }
+  .cue-tap { position: absolute; top: 60px; bottom: 0; width: 38%; z-index: 2; }
   .cue-tap-left { left: 0; }
   .cue-tap-right { right: 0; }
-  .cue-hint { text-align: center; font-size: 12px; color: #5f6875; padding: 0 0 14px; position: relative; z-index: 3; }
   /* Cast / big-screen: scale the type way up so a room can read it. */
   @media (min-width: 900px) {
     .cue-card { max-width: 1100px; }
@@ -485,13 +484,12 @@
 
 <div class="cue-overlay" id="cueOverlay">
   <div class="cue-topbar">
-    <button class="cue-close" id="cueClose">&times; done</button>
+    <button class="cue-close" id="cueClose">&times;</button>
     <div class="cue-progress" id="cueProgress"></div>
   </div>
   <div class="cue-stage" id="cueStage"></div>
   <div class="cue-tap cue-tap-left" id="cueTapLeft"></div>
   <div class="cue-tap cue-tap-right" id="cueTapRight"></div>
-  <div class="cue-hint" id="cueHint">&lsaquo; back &nbsp;&middot;&nbsp; tap right for next &rsaquo;</div>
 </div>
 
 <div class="hp-overlay" id="hpOverlay">
@@ -517,7 +515,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.0.60";
+  var APP_VERSION = "Pioneer Farms v1.0.61";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2789,7 +2787,10 @@
     var openBits = [];
     if (w.openingHymn) openBits.push("Opening hymn " + hymnSpoken(w.openingHymn));
     if (w.invocation) openBits.push("Invocation: " + w.invocation);
-    cards.push({ kicker: "Welcome", title: "Good morning", script: "\u201cWelcome to The Church of Jesus Christ of Latter-day Saints. This is the Pioneer Farms Ward sacrament meeting.\u201d", sub: openBits.join("  \u00b7  ") });
+    // greeting follows the clock — the block moves, so don't hardcode "morning"
+    var hr = new Date().getHours();
+    var greeting = hr < 12 ? "Good morning" : (hr < 17 ? "Good afternoon" : "Good evening");
+    cards.push({ kicker: "Welcome", title: greeting, script: "\u201cWelcome to The Church of Jesus Christ of Latter-day Saints. This is the Pioneer Farms Ward sacrament meeting.\u201d", sub: openBits.join("  \u00b7  ") });
 
     // 2. Announcements
     if (w.announcements) {
