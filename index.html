@@ -227,6 +227,25 @@
   .cue-clock { font-family: var(--mono); font-size: 13px; color: #5f6875; min-width: 52px; text-align: right; }
   .cue-send { background: transparent; border: 1px solid rgba(255,255,255,.14); color: #8b95a5; border-radius: 999px; padding: 5px 13px; font-size: 12px; }
   .cue-send:active { border-color: #8fb0a8; color: #8fb0a8; }
+
+  /* ---- locked agenda ---- */
+  .zone-locked { opacity: .58; }
+  .lock-banner { max-width: 620px; margin: 0 auto 16px; background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; padding: 11px 14px; font-size: 13px; text-align: center; }
+  .clerk-btn { display: block; width: 100%; max-width: 620px; margin: 10px auto 0; background: var(--deep); color: var(--btn-fg); border: none; border-radius: 10px; padding: 13px; font-size: 15px; font-weight: 600; }
+
+  /* ---- clerk view: live capture ---- */
+  .clerk-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 150; display: none; flex-direction: column;
+    padding-top: env(safe-area-inset-top); }
+  .clerk-overlay.open { display: flex; }
+  .clerk-bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: var(--card); border-bottom: 1px solid var(--rule); }
+  .clerk-back { background: transparent; border: none; color: var(--muted); font-size: 15px; padding: 0; }
+  .clerk-when { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); text-align: center; }
+  .clerk-body { flex: 1; overflow-y: auto; padding: 18px 16px 80px; }
+  .clerk-body .zone { max-width: 620px; margin-left: auto; margin-right: auto; }
+  .cal-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .cal-row input[type=date] { flex: 0 0 auto; }
+  .cal-row input[type=text] { flex: 1; }
+  .cal-del { background: transparent; border: none; color: var(--err); font-size: 20px; padding: 0 6px; }
   .cue-clock.warn { color: #d9a441; }
   .cue-clock.over { color: #d97a6c; }
   .cue-footer { display: none; align-items: center; gap: 14px; padding: 0 20px 18px; position: relative; z-index: 3; }
@@ -535,6 +554,15 @@
   </div>
 </div>
 
+<div class="clerk-overlay" id="clerkOverlay">
+  <div class="clerk-bar">
+    <button class="clerk-back" id="clerkClose">&lsaquo; done</button>
+    <div class="clerk-when" id="clerkWhen"></div>
+    <button class="btn" id="clerkShare">Share follow-up</button>
+  </div>
+  <div class="clerk-body" id="clerkBody"></div>
+</div>
+
 <div class="hp-overlay" id="hpOverlay">
   <div class="hp-panel">
     <div class="hp-head">
@@ -558,7 +586,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.1.01";
+  var APP_VERSION = "Pioneer Farms v1.1.02";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -986,6 +1014,8 @@
         id: m.id, date: m.meeting_date, thought: m.thought || "", moveins: m.moveins || "", ministering: m.ministering || "",
         ordinances: m.ordinances || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
         lockSnapshot: m.lock_snapshot || null,
+        clerkNotes: m.clerk_notes || "",
+        calendarNotes: Array.isArray(m.calendar_notes) ? m.calendar_notes : [],
         counsel: kids(bc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; }),
         callings: kids(bk, m.id).map(function (s) { return { id: s.id, name: s.name || "", calling: s.calling || "", status: s.status || "consider" }; })
       };
@@ -1003,6 +1033,8 @@
         live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
         coordination: m.coordination || "", notes: m.notes || "", sentAgenda: m.sent_agenda || null,
         lockSnapshot: m.lock_snapshot || null,
+        clerkNotes: m.clerk_notes || "",
+        calendarNotes: Array.isArray(m.calendar_notes) ? m.calendar_notes : [],
         counsel: kids(cc, m.id).map(function (s) { return { id: s.id, name: s.name || "", note: s.note || "" }; })
       };
     });
@@ -1049,14 +1081,18 @@
     });
     var bmRows = state.bishopric.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, thought: m.thought, moveins: m.moveins, ministering: m.ministering,
-                ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null, updated_at: new Date().toISOString() };
+                ordinances: m.ordinances, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null,
+                clerk_notes: m.clerkNotes || "", calendar_notes: (m.calendarNotes || []).filter(function (c) { return c.date || c.note; }),
+                updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
     var cmRows = state.council.map(function (m) {
       var r = { owner: owner, meeting_date: m.date, moveins: m.moveins, instruction: m.instruction,
                 live: m.live, care: m.care, invite: m.invite, unite: m.unite,
-                coordination: m.coordination, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null, updated_at: new Date().toISOString() };
+                coordination: m.coordination, notes: m.notes, sent_agenda: m.sentAgenda || null, lock_snapshot: m.lockSnapshot || null,
+                clerk_notes: m.clerkNotes || "", calendar_notes: (m.calendarNotes || []).filter(function (c) { return c.date || c.note; }),
+                updated_at: new Date().toISOString() };
       if (isUuid(m.id)) r.id = m.id;
       return r;
     });
@@ -1937,6 +1973,13 @@
     b2.onclick = function () { currentSheet = { type: "followup", data: m }; openSheet(buildFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
+
+    // Clerk view: live capture during the meeting (notes / assignments / dates).
+    // Always available, even when the agenda is locked — capture never freezes.
+    var clerkBtn = el("button", "btn clerk-btn", "\u270e Clerk view \u2014 capture live");
+    clerkBtn.onclick = function () { openClerkView(m, "bishopric"); };
+    app.appendChild(clerkBtn);
+
     app.appendChild(sentStatusBar(m, "bishopric"));
 
     var del = el("button", "danger", "delete this meeting");
@@ -1951,6 +1994,9 @@
       setTimeout(function () { if (del) { del.dataset.armed = "0"; del.textContent = "delete this meeting"; } }, 2500);
     };
     app.appendChild(del);
+
+    // hard lock once sent — the prepped agenda can't drift after it goes out
+    if (m.sentAgenda) applyAgendaLock(app);
   }
 
   // ---- bishopric agenda (one page, assignments up top) ----
@@ -2106,6 +2152,8 @@
       });
       cs.appendChild(block);
     });
+
+    appendClerkCapture(cs, m);
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
@@ -2336,6 +2384,11 @@
     b2.onclick = function () { currentSheet = { type: "council-followup", data: m }; openSheet(buildCouncilFollowUp(m)); };
     out.appendChild(b1); out.appendChild(b2);
     app.appendChild(out);
+
+    var clerkBtnC = el("button", "btn clerk-btn", "\u270e Clerk view \u2014 capture live");
+    clerkBtnC.onclick = function () { openClerkView(m, "council"); };
+    app.appendChild(clerkBtnC);
+
     app.appendChild(sentStatusBar(m, "council"));
 
     var del = el("button", "danger", "delete this meeting");
@@ -2350,6 +2403,8 @@
       setTimeout(function () { if (del) { del.dataset.armed = "0"; del.textContent = "delete this meeting"; } }, 2500);
     };
     app.appendChild(del);
+
+    if (m.sentAgenda) applyAgendaLock(app);
   }
 
   // ---- ward council agenda (one page, assignments up top) ----
@@ -2523,6 +2578,8 @@
       cs.appendChild(block);
     });
 
+    appendClerkCapture(cs, m);
+
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
 
@@ -2568,6 +2625,21 @@
     m.sentAgenda = todayISO();
     m.lockSnapshot = (tab === "council" ? councilAgendaLines(m) : bishopricAgendaLines(m));
     save();
+  }
+
+  // Hard lock: once the agenda is sent, its prepped fields go read-only so the
+  // version people received can't silently drift. The sent bar's "unlock"
+  // reverses it. The clerk view stays fully live regardless — capture never freezes.
+  function applyAgendaLock(app) {
+    var zones = app.querySelectorAll(".zone");
+    for (var i = 0; i < zones.length; i++) {
+      zones[i].classList.add("zone-locked");
+      var nodes = zones[i].querySelectorAll("input, textarea, select, button");
+      for (var j = 0; j < nodes.length; j++) nodes[j].disabled = true;
+    }
+    var banner = el("div", "lock-banner", "\uD83D\uDD12 Sent \u2014 agenda locked. Capture in Clerk view, or unlock below to edit.");
+    if (app.firstChild) app.insertBefore(banner, app.firstChild.nextSibling);
+    else app.appendChild(banner);
   }
 
   function sentStatusBar(m, tab) {
@@ -2809,6 +2881,150 @@
 
     var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
+
+  // Bundle what was captured live (dates + notes) onto the follow-up, so one
+  // artifact carries assignments, calendar, and notes out of the meeting.
+  function appendClerkCapture(cs, m) {
+    var cal = (m.calendarNotes || []).filter(function (c) { return c.date || c.note; });
+    if (cal.length) {
+      var sC = el("div", "cs-sec");
+      sC.appendChild(el("div", "cs-h", "Dates"));
+      sC.appendChild(el("hr", "cs-hrule"));
+      cal.slice().sort(function (a, b) { return (a.date || "").localeCompare(b.date || ""); })
+        .forEach(function (c) {
+          var line = el("div", "cs-checkline");
+          line.appendChild(el("span", "cs-box", "\u25a1"));
+          var t = el("span");
+          if (c.date) t.appendChild(el("strong", null, fmtShort(c.date) + (c.note ? " \u2014 " : "")));
+          if (c.note) t.appendChild(document.createTextNode(c.note));
+          line.appendChild(t);
+          sC.appendChild(line);
+        });
+      cs.appendChild(sC);
+    }
+    if (m.clerkNotes && m.clerkNotes.trim()) {
+      var sN = el("div", "cs-sec");
+      sN.appendChild(el("div", "cs-h", "Notes"));
+      sN.appendChild(el("hr", "cs-hrule"));
+      lines(m.clerkNotes).forEach(function (l) { sN.appendChild(el("div", "cs-note", l)); });
+      cs.appendChild(sN);
+    }
+  }
+
+  // ===== CLERK VIEW: live capture during the meeting =====
+  // Notes (fast + messy), assignments (SAME pool as the agenda's — just a
+  // faster door into it), and quick calendar notes. All three bundle into the
+  // shareable follow-up. Stays live even when the agenda is locked.
+  var clerkCtx = { m: null, tab: "bishopric" };
+
+  function openClerkView(m, tab) {
+    clerkCtx.m = m; clerkCtx.tab = tab;
+    if (!m.clerkNotes) m.clerkNotes = "";
+    if (!m.calendarNotes) m.calendarNotes = [];
+    document.getElementById("clerkWhen").textContent =
+      (tab === "council" ? "Ward Council" : "Bishopric") + "  \u00b7  " + fmtShort(m.date);
+    renderClerkView();
+    document.getElementById("clerkOverlay").classList.add("open");
+  }
+
+  function renderClerkView() {
+    var m = clerkCtx.m, tab = clerkCtx.tab;
+    var body = document.getElementById("clerkBody");
+    body.innerHTML = "";
+    if (!m) return;
+
+    var isCouncil = tab === "council";
+    var addFn = isCouncil ? addCouncilAssignment : addAssignment;
+    var toggleFn = isCouncil ? toggleCouncilAssignment : toggleAssignment;
+    var delFn = isCouncil ? deleteCouncilAssignment : deleteAssignment;
+    var forMeeting = isCouncil ? councilAssignmentsForMeeting : assignmentsForMeeting;
+
+    function zoneHead(z, title, who) {
+      var zh = el("div", "zone-head");
+      zh.appendChild(el("h2", null, title));
+      if (who) zh.appendChild(el("span", "who", who));
+      z.appendChild(zh);
+    }
+
+    // ---- NOTES (fast + messy) ----
+    var zN = el("div", "zone");
+    zoneHead(zN, "Notes", "fast + messy");
+    var f = el("div", "field");
+    var ta = el("textarea"); ta.rows = 7; ta.value = m.clerkNotes || "";
+    ta.placeholder = "whatever comes up \u2014 clean it later";
+    ta.oninput = function () { m.clerkNotes = ta.value; save(); };
+    f.appendChild(ta); zN.appendChild(f);
+    body.appendChild(zN);
+
+    // ---- ASSIGNMENTS MADE (same pool as the agenda's) ----
+    var zA = el("div", "zone");
+    zoneHead(zA, "Assignments", "goes out on follow-up");
+    var made = forMeeting(m.id).filter(function (a) { return a.meetingId === m.id; });
+    made.forEach(function (a) {
+      var row = el("div", "asg" + (a.status === "done" ? " done" : ""));
+      var chk = el("div", "asg-check", a.status === "done" ? "\u2713" : "");
+      chk.onclick = function () { toggleFn(a.id); renderClerkView(); };
+      row.appendChild(chk);
+      var bd = el("div", "asg-body");
+      bd.appendChild(el("div", "asg-what", a.what || "(no description)"));
+      if (a.who) bd.appendChild(el("div", "asg-meta", a.who));
+      row.appendChild(bd);
+      var dl = el("button", "asg-del", "\u00d7");
+      dl.onclick = function () { delFn(a.id); renderClerkView(); };
+      row.appendChild(dl);
+      zA.appendChild(row);
+    });
+    var addWrap = el("div", "asg-add");
+    var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
+    whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;background:var(--input-bg);color:var(--ink);";
+    whoIn.setAttribute("list", isCouncil ? "dl-council-assignees" : "dl-assignees");
+    whoIn.setAttribute("autocomplete", "off");
+    var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
+    whatIn.style.cssText = whoIn.style.cssText;
+    var addBtn = el("button", "btn asg-add-full", "Add");
+    addBtn.onclick = function () {
+      if (!whatIn.value.trim() && !whoIn.value.trim()) return;
+      addFn(whoIn.value.trim(), whatIn.value.trim(), m.id);
+      renderClerkView();
+    };
+    addWrap.appendChild(whoIn); addWrap.appendChild(whatIn); addWrap.appendChild(addBtn);
+    zA.appendChild(addWrap);
+    body.appendChild(zA);
+
+    // ---- CALENDAR NOTES ----
+    var zC = el("div", "zone");
+    zoneHead(zC, "Dates", "quick calendar notes");
+    (m.calendarNotes || []).forEach(function (c, i) {
+      var row = el("div", "cal-row");
+      var di = el("input"); di.type = "date"; di.value = c.date || "";
+      di.onchange = function () { c.date = di.value; save(); };
+      var ni = el("input"); ni.type = "text"; ni.value = c.note || ""; ni.placeholder = "what\u2019s happening";
+      ni.oninput = function () { c.note = ni.value; save(); };
+      var rm = el("button", "cal-del", "\u00d7");
+      rm.onclick = function () { m.calendarNotes.splice(i, 1); save(); renderClerkView(); };
+      row.appendChild(di); row.appendChild(ni); row.appendChild(rm);
+      zC.appendChild(row);
+    });
+    var addC = el("button", "add-line", "+ add a date");
+    addC.onclick = function () {
+      m.calendarNotes.push({ date: todayISO(), note: "" });
+      save(); renderClerkView();
+    };
+    zC.appendChild(addC);
+    body.appendChild(zC);
+  }
+
+  document.getElementById("clerkClose").onclick = function () {
+    document.getElementById("clerkOverlay").classList.remove("open");
+    render();
+  };
+  document.getElementById("clerkShare").onclick = function () {
+    var m = clerkCtx.m, tab = clerkCtx.tab;
+    if (!m) return;
+    currentSheet = { type: tab === "council" ? "council-followup" : "followup", data: m };
+    document.getElementById("clerkOverlay").classList.remove("open");
+    openSheet(tab === "council" ? buildCouncilFollowUp(m) : buildFollowUp(m));
+  };
 
   // ===== CUE CARDS (live conducting: one moment per full-screen card) =====
   // Builds the full meeting arc, skipping moments with nothing to show.
