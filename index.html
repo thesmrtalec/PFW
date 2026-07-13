@@ -178,22 +178,26 @@
   }
   .hp-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--rule); }
   .hp-title { font-family: var(--serif); font-size: 17px; font-weight: 600; color: var(--deep); margin-bottom: 10px; text-align: center; }
-  .hp-search {
-    width: 100%; box-sizing: border-box; font-family: var(--sans); font-size: 16px;
-    border: 1px solid var(--rule); border-radius: 9px; padding: 11px 13px; background: var(--input-bg); color: var(--ink);
-    -webkit-appearance: none; appearance: none;
-  }
-  .hp-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .hp-tabs { display: flex; gap: 6px; margin-top: 10px; }
-  .hp-tab { flex: 1; text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 7px 4px; border-radius: 7px; border: 1px solid var(--rule); background: #fff; color: var(--muted); }
-  .hp-tab.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
-  .hp-list { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 0 8px; }
-  .hp-row { display: flex; align-items: baseline; gap: 12px; padding: 11px 16px; cursor: pointer; border-bottom: 1px solid #eef0f3; }
-  .hp-row:active { background: var(--accent-soft); }
-  .hp-num { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); min-width: 44px; flex: 0 0 auto; }
-  .hp-name { flex: 1; font-size: 15px; color: var(--ink); }
-  .hp-empty { text-align: center; color: var(--muted); font-family: var(--serif); font-style: italic; padding: 30px 16px; }
-  .hp-cancel { border-top: 1px solid var(--rule); text-align: center; padding: 13px; color: var(--accent); font-weight: 600; font-size: 15px; background: #fff; }
+
+  /* ——— numpad: you know the number. punch it. ——— */
+  .np-readout { text-align: center; padding: 6px 0 10px; }
+  .np-num { font-family: var(--mono); font-size: 40px; font-weight: 700; color: var(--deep); line-height: 1.05; letter-spacing: .04em; }
+  .np-num.empty { color: var(--faint); }
+  .np-name { font-family: var(--serif); font-size: 16px; color: var(--muted); margin-top: 4px;
+    min-height: 22px; padding: 0 12px; }
+  .np-name.hit { color: var(--accent); font-weight: 600; }
+  .np-name.miss { color: var(--err); font-style: italic; }
+  .np-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px; }
+  .np-key { font-family: var(--mono); font-size: 26px; font-weight: 600; color: var(--ink);
+    background: var(--card); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 18px 0; -webkit-tap-highlight-color: transparent; cursor: pointer; }
+  .np-key:active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .np-sub { font-size: 22px; color: var(--muted); }
+  .np-go { background: var(--deep); border-color: var(--deep); color: var(--btn-fg);
+    font-family: var(--sans); font-size: 17px; font-weight: 700; }
+  .np-go:disabled { opacity: .35; }
+  .np-go:active:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .hp-cancel { border-top: 1px solid var(--rule); text-align: center; padding: 13px; color: var(--accent); font-weight: 600; font-size: 15px; background: var(--card); }
 
   /* output */
   .sheet-overlay { position: fixed; inset: 0; background: var(--paper); z-index: 100; overflow-y: auto; display: none; }
@@ -567,16 +571,25 @@
   <div class="hp-panel">
     <div class="hp-head">
       <div class="hp-title" id="hpTitle">Choose a hymn</div>
-      <input class="hp-search" id="hpSearch" type="text" inputmode="text"
-        placeholder="type a number or a word - e.g. 66 or rejoice"
-        autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
-      <div class="hp-tabs" id="hpTabs">
-        <div class="hp-tab active" data-book="all">All</div>
-        <div class="hp-tab" data-book="85">Hymnbook (1985)</div>
-        <div class="hp-tab" data-book="HC">Home &amp; Church</div>
+      <div class="np-readout">
+        <div class="np-num" id="npNum">&mdash;</div>
+        <div class="np-name" id="npName">punch the number</div>
       </div>
     </div>
-    <div class="hp-list" id="hpList"></div>
+    <div class="np-pad" id="npPad">
+      <button class="np-key" data-k="1">1</button>
+      <button class="np-key" data-k="2">2</button>
+      <button class="np-key" data-k="3">3</button>
+      <button class="np-key" data-k="4">4</button>
+      <button class="np-key" data-k="5">5</button>
+      <button class="np-key" data-k="6">6</button>
+      <button class="np-key" data-k="7">7</button>
+      <button class="np-key" data-k="8">8</button>
+      <button class="np-key" data-k="9">9</button>
+      <button class="np-key np-sub" data-k="back">&#9003;</button>
+      <button class="np-key" data-k="0">0</button>
+      <button class="np-key np-go" id="npGo" data-k="go">Set</button>
+    </div>
     <div class="hp-cancel" id="hpCancel">Cancel</div>
   </div>
 </div>
@@ -586,7 +599,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.1.02";
+  var APP_VERSION = "Pioneer Farms v1.1.03";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -834,79 +847,78 @@
   function hymnNumFromValue(v){ var m = (v||'').match(/^\s*(\d+)\b/); return m ? parseInt(m[1],10) : null; }
 
   var hpActive = null;
-  var hpBook = 'all';
 
+  // ——— hymn numpad ———
+  // You know the number. Punch it, see the title confirm, Set. No text keyboard,
+  // no scrolling 340 titles to find one you could have typed in two taps.
+  var npBuf = "";
+  function npMatch() {
+    if (!npBuf) return null;
+    var n = parseInt(npBuf, 10);
+    var hits = HYMNS.filter(function (h) { return h.n === n; });
+    return hits.length ? hits[0] : null;
+  }
+  function npRender() {
+    var numEl = document.getElementById("npNum");
+    var nameEl = document.getElementById("npName");
+    var go = document.getElementById("npGo");
+    numEl.textContent = npBuf || "\u2014";
+    numEl.className = "np-num" + (npBuf ? "" : " empty");
+    var h = npMatch();
+    if (!npBuf) {
+      nameEl.textContent = "punch the number";
+      nameEl.className = "np-name";
+      go.disabled = true;
+    } else if (h) {
+      nameEl.textContent = h.t;
+      nameEl.className = "np-name hit";
+      go.disabled = false;
+    } else {
+      nameEl.textContent = "no hymn " + npBuf;
+      nameEl.className = "np-name miss";
+      go.disabled = true;
+    }
+  }
+  function npPress(k) {
+    if (k === "back") { npBuf = npBuf.slice(0, -1); }
+    else if (k === "go") {
+      var h = npMatch();
+      if (h) {
+        if (hpActive && hpActive.set) hpActive.set(formatHymn(h));
+        closeHymnPicker();
+      }
+      return;
+    } else {
+      if (npBuf.length >= 3) return;         // hymn numbers top out in the 300s
+      if (npBuf === "" && k === "0") return; // no leading zero
+      npBuf += k;
+    }
+    npRender();
+  }
   function openHymnPicker(opts){
     hpActive = opts;
-    hpBook = 'all';
-    setActiveTab('all');
-    var search = document.getElementById('hpSearch');
     document.getElementById('hpTitle').textContent = opts.title || 'Choose a hymn';
-    search.value = '';
+    npBuf = "";
+    npRender();
     document.getElementById('hpOverlay').classList.add('open');
-    renderHymnList('');
-    setTimeout(function(){ search.focus(); }, 60);
   }
   function closeHymnPicker(){
     document.getElementById('hpOverlay').classList.remove('open');
     hpActive = null;
+    npBuf = "";
   }
-  function setActiveTab(book){
-    var tabs = document.querySelectorAll('#hpTabs .hp-tab');
-    for (var i=0;i<tabs.length;i++){
-      if (tabs[i].getAttribute('data-book') === book) tabs[i].classList.add('active');
-      else tabs[i].classList.remove('active');
-    }
-  }
-  function renderHymnList(q){
-    var list = document.getElementById('hpList');
-    list.innerHTML = '';
-    var pool = HYMNS.filter(function(h){ return hpBook === 'all' || h.b === hpBook; });
-    var raw = (q||'').trim();
-    var results;
-    if (raw === ''){
-      results = pool;
-    } else if (/^\d+$/.test(raw)) {
-      var num = parseInt(raw,10);
-      var exact = pool.filter(function(h){ return h.n === num; });
-      var prefix = pool.filter(function(h){ return h.n !== num && String(h.n).indexOf(raw) === 0; });
-      results = exact.concat(prefix);
-    } else {
-      var terms = normalize(raw).split(' ').filter(Boolean);
-      results = pool.filter(function(h){
-        var nt = normalize(h.t);
-        return terms.every(function(t){ return nt.indexOf(t) !== -1; });
-      });
-    }
-    if (!results.length){
-      list.appendChild(el('div','hp-empty','No hymn matches that.'));
-      return;
-    }
-    results.slice(0, 80).forEach(function(h){
-      var row = el('div','hp-row');
-      row.appendChild(el('span','hp-num', String(h.n)));
-      row.appendChild(el('span','hp-name', h.t));
-      row.onclick = function(){
-        if (hpActive && hpActive.set) hpActive.set(formatHymn(h));
-        closeHymnPicker();
-      };
-      list.appendChild(row);
-    });
-  }
-  document.getElementById('hpSearch').addEventListener('input', function(e){ renderHymnList(e.target.value); });
-  document.getElementById('hpSearch').addEventListener('keydown', function(e){
-    if (e.key === 'Enter'){ var f = document.querySelector('#hpList .hp-row'); if (f) f.click(); }
+  document.getElementById('npPad').addEventListener('click', function (e) {
+    var b = e.target.closest('.np-key');
+    if (b) npPress(b.getAttribute('data-k'));
   });
-  (function(){
-    var tabs = document.querySelectorAll('#hpTabs .hp-tab');
-    for (var i=0;i<tabs.length;i++){
-      tabs[i].addEventListener('click', function(){
-        hpBook = this.getAttribute('data-book');
-        setActiveTab(hpBook);
-        renderHymnList(document.getElementById('hpSearch').value);
-      });
-    }
-  })();
+  // hardware keyboard, for desktop testing
+  document.addEventListener('keydown', function (e) {
+    if (!document.getElementById('hpOverlay').classList.contains('open')) return;
+    if (/^[0-9]$/.test(e.key)) npPress(e.key);
+    else if (e.key === 'Backspace') npPress('back');
+    else if (e.key === 'Enter') npPress('go');
+    else if (e.key === 'Escape') closeHymnPicker();
+  });
   document.getElementById('hpCancel').onclick = closeHymnPicker;
   document.getElementById('hpOverlay').addEventListener('click', function(e){
     if (e.target === this) closeHymnPicker();
