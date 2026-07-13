@@ -599,7 +599,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.1.03";
+  var APP_VERSION = "Pioneer Farms v1.1.04";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -889,7 +889,8 @@
       }
       return;
     } else {
-      if (npBuf.length >= 3) return;         // hymn numbers top out in the 300s
+      // Home & Church hymns run 1001-1210, so numbers can be 4 digits.
+      if (npBuf.length >= 4) return;
       if (npBuf === "" && k === "0") return; // no leading zero
       npBuf += k;
     }
