@@ -412,6 +412,21 @@
   .tabs .tab { flex: 1; text-align: center; font-family: var(--sans); font-size: 13.5px; font-weight: 600; padding: 9px 6px; border-radius: 8px; border: none; background: transparent; color: var(--muted); }
   .tabs .tab.active { background: #fff; color: var(--deep); box-shadow: var(--shadow); }
 
+  /* ---- utility row (bottom of list screens) ---- */
+  .util-row { display: flex; gap: 8px; flex-wrap: wrap; max-width: 620px; margin: 26px auto 0; padding-top: 16px; border-top: 1px dashed var(--rule); }
+  .util-btn { flex: 1 1 auto; min-width: 130px; display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid var(--rule); border-radius: 11px; padding: 13px 15px; box-shadow: var(--shadow); text-align: left; color: var(--ink); }
+  .util-btn:active { border-color: var(--accent); }
+  .util-btn .util-ico { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 16px; font-weight: 600; }
+  .util-btn .util-tx { min-width: 0; }
+  .util-btn .util-tx b { display: block; font-family: var(--serif); font-size: 15px; font-weight: 600; color: var(--deep); line-height: 1.2; }
+  .util-btn .util-tx span { font-size: 11.5px; color: var(--muted); }
+
+  /* ---- priests planner ---- */
+  .pq-kind { display: inline-block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px; background: var(--accent-soft); color: var(--accent); }
+  .pq-kind.activity { background: #eef2e6; color: #6b7d3a; }
+  .pq-kind.service { background: #e6eef2; color: #3a6b7d; }
+  .pq-kind.other { background: var(--past-bg); color: var(--muted); }
+
   /* ---- assignments ---- */
   .asg { border: 1px solid var(--rule); border-radius: 10px; padding: 10px 12px; margin-bottom: 9px; background: #fbfcfd; display: flex; gap: 10px; align-items: flex-start; }
   .asg.done { opacity: .55; }
@@ -599,7 +614,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.1.04";
+  var APP_VERSION = "Pioneer Farms v1.2.00";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -926,7 +941,7 @@
   });
 
   // ---------- state ----------
-  var state = { weeks: [], bishopric: [], assignments: [], council: [], councilAssignments: [] };
+  var state = { weeks: [], bishopric: [], assignments: [], council: [], councilAssignments: [], priests: [] };
   var currentSheet = null; // { type, data } for the open output sheet; drives PDF export
   var dataLoaded = false;  // becomes true only after a successful initial load; gates all saves
   var view = { tab: "sacrament", screen: "list", weekId: null, bmId: null };
@@ -988,12 +1003,14 @@
       sb.from("assignments").select("*"),
       sb.from("council_meetings").select("*"),
       sb.from("council_counsel").select("*"),
-      sb.from("council_assignments").select("*")
+      sb.from("council_assignments").select("*"),
+      sb.from("priests_events").select("*"),
+      sb.from("priests_assignments").select("*")
     ]).then(function (res) {
       var err = res.filter(function (r) { return r.error; })[0];
       if (err) { pill("error", "load failed"); console.error(err.error); if (cb) cb(err.error); return; }
       var d = res.map(function (r) { return r.data || []; });
-      hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10]);
+      hydrate(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8], d[9], d[10], d[11], d[12]);
       dataLoaded = true; // load succeeded — saving is now safe
       pill("saved", "loaded");
       if (cb) cb(null);
@@ -1001,8 +1018,9 @@
   }
 
   // map DB rows -> in-memory camelCase model the UI already uses
-  function hydrate(sm, spk, rel, cal, bm, bc, bk, asg, cm, cc, casg) {
+  function hydrate(sm, spk, rel, cal, bm, bc, bk, asg, cm, cc, casg, pe, pa) {
     function kids(rows, mid) { return rows.filter(function (x) { return x.meeting_id === mid; }).sort(function (a, b) { return (a.position||0)-(b.position||0); }); }
+    function pkids(rows, eid) { return rows.filter(function (x) { return x.event_id === eid; }).sort(function (a, b) { return (a.position||0)-(b.position||0); }); }
     state.weeks = (sm || []).map(function (m) {
       return {
         id: m.id, date: m.meeting_date, conducting: m.conducting || "",
@@ -1054,6 +1072,15 @@
     state.councilAssignments = (casg || []).map(function (a) {
       return { id: a.id, who: a.assignee || "", what: a.what || "", status: a.status || "open",
                dateMade: a.date_made, dateDone: a.date_done, meetingId: a.origin_meeting };
+    });
+
+    state.priests = (pe || []).map(function (e) {
+      return {
+        id: e.id, date: e.event_date, kind: e.kind || "lesson", title: e.title || "",
+        charge: Array.isArray(e.charge) ? e.charge : [],
+        notes: e.notes || "",
+        assignments: pkids(pa || [], e.id).map(function (a) { return { id: a.id, name: a.name || "", task: a.task || "" }; })
+      };
     });
   }
 
@@ -1110,13 +1137,22 @@
       return r;
     });
 
+    var peRows = state.priests.map(function (e) {
+      var r = { owner: owner, event_date: e.date, kind: e.kind || "lesson", title: e.title || "",
+                charge: (e.charge || []).filter(function (c) { return (c.name || "").trim(); }),
+                notes: e.notes || "", updated_at: new Date().toISOString() };
+      if (isUuid(e.id)) r.id = e.id;
+      return r;
+    });
+
     // meetings first (children need their ids), then reconcile children + assignments
     Promise.all([
       smRows.length ? sb.from("sacrament_meetings").upsert(smRows) : Promise.resolve({ error: null }),
       bmRows.length ? sb.from("bishopric_meetings").upsert(bmRows) : Promise.resolve({ error: null }),
-      cmRows.length ? sb.from("council_meetings").upsert(cmRows) : Promise.resolve({ error: null })
+      cmRows.length ? sb.from("council_meetings").upsert(cmRows) : Promise.resolve({ error: null }),
+      peRows.length ? sb.from("priests_events").upsert(peRows) : Promise.resolve({ error: null })
     ]).then(function (r) {
-      if (r[0].error || r[1].error || r[2].error) throw (r[0].error || r[1].error || r[2].error);
+      if (r[0].error || r[1].error || r[2].error || r[3].error) throw (r[0].error || r[1].error || r[2].error || r[3].error);
       // ids are stable client-generated UUIDs, so no reconciliation needed
       return pushChildren(owner);
     }).then(function () {
@@ -1178,6 +1214,9 @@
     });
     childOps("council_counsel", "meeting_id", state.council, function (m) {
       return (m.counsel || []).filter(function (s){return s.name||s.note;}).map(function (s) { return { name: s.name, note: s.note }; });
+    });
+    childOps("priests_assignments", "event_id", state.priests, function (e) {
+      return (e.assignments || []).filter(function (s){return s.name||s.task;}).map(function (s) { return { name: s.name, task: s.task }; });
     });
 
     // assignments (flat, owner-scoped): upsert existing uuids, insert new
@@ -1310,6 +1349,24 @@
     state.councilAssignments = state.councilAssignments.filter(function (x) { return x.id !== id; }); save();
   }
 
+  // ----- priests quorum planner model -----
+  // One item shape for both lessons and activities: when / what / who's in
+  // charge / additional assignments (person -> task) / notes. Prints one event
+  // to a single-page sheet for email or WhatsApp.
+  var PQ_KINDS = ["lesson", "activity", "service", "other"];
+  function blankPriestEvent() {
+    return {
+      id: uid(),
+      date: nextSundayISO(),
+      kind: "lesson",
+      title: "",            // the "what" — topic or activity name
+      charge: [],           // [{id, name}] person(s) in charge
+      assignments: [],      // [{id, name, task}] additional assignments
+      notes: ""
+    };
+  }
+  function findPriestEvent(id) { return state.priests.filter(function (e) { return e.id === id; })[0]; }
+
   function blankWeek() {
     return {
       id: uid(),
@@ -1384,18 +1441,40 @@
     var app = document.getElementById("app");
     app.innerHTML = "";
     app.appendChild(header());
-    // tab bar only shows on list screens
-    if (view.screen === "list") app.appendChild(tabBar());
+    // tab bar only shows on primary-tab list screens (not utility sub-areas)
+    if (view.screen === "list" && view.tab !== "priests") app.appendChild(tabBar());
     if (view.tab === "bishopric") {
       if (view.screen === "list") renderBishopricList(app);
       else renderBishopricEditor(app);
     } else if (view.tab === "council") {
       if (view.screen === "list") renderCouncilList(app);
       else renderCouncilEditor(app);
+    } else if (view.tab === "priests") {
+      if (view.screen === "list") renderPriestsList(app);
+      else renderPriestsEditor(app);
     } else {
       if (view.screen === "list") renderList(app);
       else renderEditor(app);
     }
+    // utility row: bottom of the primary list screens, opens sub-tools
+    if (view.screen === "list" && view.tab !== "priests") app.appendChild(utilRow());
+  }
+  function utilRow() {
+    var row = el("div", "util-row");
+    function tool(ico, title, sub, go) {
+      var b = el("button", "util-btn");
+      b.appendChild(el("span", "util-ico", ico));
+      var tx = el("div", "util-tx");
+      tx.appendChild(el("b", null, title));
+      tx.appendChild(el("span", null, sub));
+      b.appendChild(tx);
+      b.onclick = go;
+      return b;
+    }
+    row.appendChild(tool("P", "Priests Quorum", "lessons & activities", function () {
+      view = { tab: "priests", screen: "list" }; render();
+    }));
+    return row;
   }
   function header() {
     var top = el("div", "top");
@@ -2418,6 +2497,204 @@
     app.appendChild(del);
 
     if (m.sentAgenda) applyAgendaLock(app);
+  }
+
+  // ================= PRIESTS QUORUM PLANNER =================
+  function pqKindClass(k) { return "pq-kind " + (k === "activity" ? "activity" : k === "service" ? "service" : k === "other" ? "other" : ""); }
+
+  function renderPriestsList(app) {
+    var back = el("button", "back-link", "\u2039 ward operations");
+    back.onclick = function () { view = { tab: "sacrament", screen: "list" }; render(); };
+    app.appendChild(back);
+
+    var head = el("div", "list-head");
+    head.appendChild(el("span", "eyebrow", "Priests Quorum"));
+    var addBtn = el("button", "btn-ghost", "+ new");
+    addBtn.onclick = function () {
+      var e = blankPriestEvent();
+      state.priests.push(e); save();
+      view = { tab: "priests", screen: "editor", pqId: e.id }; render();
+    };
+    head.appendChild(addBtn);
+    app.appendChild(head);
+
+    if (!state.priests.length) {
+      app.appendChild(el("div", "empty", "Nothing planned yet. Tap \u201c+ new\u201d to add a lesson or activity."));
+      return;
+    }
+    var items = state.priests.slice().sort(function (a, b) { return (a.date||"").localeCompare(b.date||""); });
+    var upcoming = items.filter(function (e) { return !isPast(e.date); });
+    var past = items.filter(function (e) { return isPast(e.date); }).reverse();
+
+    function buildCard(e) {
+      var card = el("div", "week-card");
+      var when = el("div", "week-when");
+      var top = el("div", "week-date");
+      top.appendChild(document.createTextNode(fmtShort(e.date)));
+      when.appendChild(top);
+      var charge = (e.charge || []).filter(function (c) { return c.name; }).map(function (c) { return c.name; });
+      var metaBits = [];
+      metaBits.push(e.title || "(untitled)");
+      if (charge.length) metaBits.push(charge.join(", "));
+      when.appendChild(el("div", "week-meta", metaBits.join(" \u00b7 ")));
+      card.appendChild(when);
+      card.appendChild(el("span", pqKindClass(e.kind), e.kind || "lesson"));
+      card.onclick = function () { view = { tab: "priests", screen: "editor", pqId: e.id }; render(); };
+      return card;
+    }
+
+    if (!upcoming.length && past.length) {
+      app.appendChild(el("div", "empty", "Nothing upcoming. Tap \u201c+ new\u201d to plan one."));
+    }
+    upcoming.forEach(function (e) { app.appendChild(buildCard(e)); });
+    renderArchive(app, past, "priests", buildCard);
+  }
+
+  function renderPriestsEditor(app) {
+    var e = findPriestEvent(view.pqId);
+    if (!e) { view = { tab: "priests", screen: "list" }; return render(); }
+
+    var back = el("button", "back-link", "\u2039 all priests items");
+    back.onclick = function () { save(); view = { tab: "priests", screen: "list" }; render(); };
+    app.appendChild(back);
+
+    function zoneHead(z, title, who) {
+      var zh = el("div", "zone-head");
+      zh.appendChild(el("h2", null, title));
+      if (who) zh.appendChild(el("span", "who", who));
+      z.appendChild(zh);
+    }
+
+    // ===== when / kind / what =====
+    var z0 = el("div", "zone");
+    zoneHead(z0, "Priests Quorum");
+    var df = el("div", "field");
+    df.appendChild(el("label", null, "date"));
+    var dinput = el("input"); dinput.type = "date"; dinput.value = e.date;
+    dinput.onchange = function () { e.date = dinput.value; save(); };
+    df.appendChild(dinput); z0.appendChild(df);
+
+    var kf = el("div", "field");
+    kf.appendChild(el("label", null, "type"));
+    var ksel = el("select");
+    PQ_KINDS.forEach(function (k) { var o = el("option", null, k); o.value = k; if (e.kind === k) o.selected = true; ksel.appendChild(o); });
+    ksel.onchange = function () { e.kind = ksel.value; save(); };
+    kf.appendChild(ksel); z0.appendChild(kf);
+
+    var tf = el("div", "field"); tf.style.marginBottom = "4px";
+    tf.appendChild(el("label", null, "what"));
+    var tin = el("input"); tin.type = "text"; tin.value = e.title || "";
+    tin.placeholder = "lesson topic or activity name";
+    tin.oninput = function () { e.title = tin.value; save(); };
+    tf.appendChild(tin); z0.appendChild(tf);
+    app.appendChild(z0);
+
+    // ===== person(s) in charge =====
+    var zP = el("div", "zone");
+    zoneHead(zP, "In charge", "who runs it");
+    (e.charge || []).forEach(function (c, i) {
+      var row = el("div", "counsel-row");
+      var nf = el("div", "field"); nf.style.marginBottom = "0";
+      nf.appendChild(el("label", null, "name"));
+      var ni = el("input"); ni.type = "text"; ni.value = c.name || "";
+      ni.oninput = function () { c.name = ni.value; save(); };
+      nf.appendChild(ni); row.appendChild(nf);
+      var rm = el("button", "danger", "remove");
+      rm.onclick = function () { e.charge.splice(i, 1); save(); render(); };
+      row.appendChild(rm);
+      zP.appendChild(row);
+    });
+    var addP = el("button", "add-line", "+ add person");
+    addP.onclick = function () { if (!e.charge) e.charge = []; e.charge.push({ id: uid(), name: "" }); save(); render(); };
+    zP.appendChild(addP);
+    app.appendChild(zP);
+
+    // ===== additional assignments (person -> task) =====
+    var zA = el("div", "zone");
+    zoneHead(zA, "Assignments", "name \u2192 task");
+    (e.assignments || []).forEach(function (a, i) {
+      var row = el("div", "counsel-row");
+      var nf = el("div", "field"); nf.style.marginBottom = "6px";
+      nf.appendChild(el("label", null, "name"));
+      var ni = el("input"); ni.type = "text"; ni.value = a.name || "";
+      ni.oninput = function () { a.name = ni.value; save(); };
+      nf.appendChild(ni); row.appendChild(nf);
+      var kf2 = el("div", "field"); kf2.style.marginBottom = "0";
+      kf2.appendChild(el("label", null, "assignment"));
+      var ki = el("input"); ki.type = "text"; ki.value = a.task || "";
+      ki.oninput = function () { a.task = ki.value; save(); };
+      kf2.appendChild(ki); row.appendChild(kf2);
+      var rm = el("button", "danger", "remove");
+      rm.onclick = function () { e.assignments.splice(i, 1); save(); render(); };
+      row.appendChild(rm);
+      zA.appendChild(row);
+    });
+    var addA = el("button", "add-line", "+ add assignment");
+    addA.onclick = function () { if (!e.assignments) e.assignments = []; e.assignments.push({ id: uid(), name: "", task: "" }); save(); render(); };
+    zA.appendChild(addA);
+    app.appendChild(zA);
+
+    // ===== notes =====
+    var zN = el("div", "zone");
+    zoneHead(zN, "Notes");
+    var nf3 = el("div", "field"); nf3.style.marginBottom = "4px";
+    var nta = el("textarea"); nta.rows = 3; nta.value = e.notes || "";
+    nta.placeholder = "materials, reminders, anything else \u2014 one per line";
+    nta.oninput = function () { e.notes = nta.value; save(); };
+    nf3.appendChild(nta); zN.appendChild(nf3);
+    app.appendChild(zN);
+
+    // ===== output =====
+    var out = el("div", "out-bar");
+    var b1 = el("button", "btn", "One-pager");
+    b1.onclick = function () { currentSheet = { type: "priest-event", data: e }; openSheet(buildPriestSheet(e)); };
+    out.appendChild(b1);
+    app.appendChild(out);
+
+    var del = el("button", "danger", "delete this item");
+    del.style.cssText += "display:block;margin:14px auto 0;";
+    del.onclick = function () {
+      if (del.dataset.armed === "1") {
+        dbDelete("priests_events", e.id);
+        state.priests = state.priests.filter(function (x) { return x.id !== e.id; });
+        save(); view = { tab: "priests", screen: "list" }; render(); return;
+      }
+      del.dataset.armed = "1"; del.textContent = "tap again to delete";
+      setTimeout(function () { if (del) { del.dataset.armed = "0"; del.textContent = "delete this item"; } }, 2500);
+    };
+    app.appendChild(del);
+  }
+
+  // ---- single-event one-pager (email / WhatsApp) ----
+  function buildPriestSheet(e) {
+    var doc = document.createDocumentFragment();
+    var cs = el("div", "cs");
+    doc.appendChild(cs);
+    var kindLabel = (e.kind || "lesson");
+    cs.appendChild(el("div", "cs-title", "Priests Quorum \u2014 " + kindLabel.charAt(0).toUpperCase() + kindLabel.slice(1)));
+    cs.appendChild(el("div", "cs-sub", WARD));
+    cs.appendChild(el("div", "cs-date", fmtDate(e.date)));
+
+    var sW = csSection(cs, e.kind === "activity" || e.kind === "service" ? "Activity" : "Lesson");
+    sW.appendChild(csRow("What", e.title || "\u2014"));
+
+    var charge = (e.charge || []).filter(function (c) { return c.name; });
+    if (charge.length) {
+      charge.forEach(function (c, i) { sW.appendChild(csRow(i === 0 ? "In charge" : "", c.name)); });
+    }
+
+    var asg = (e.assignments || []).filter(function (a) { return a.name || a.task; });
+    if (asg.length) {
+      var sA = csSection(cs, "Assignments");
+      asg.forEach(function (a) { sA.appendChild(csRow(a.name || "\u2014", a.task || "\u2014")); });
+    }
+
+    if (e.notes) {
+      var sN = csSection(cs, "Notes");
+      lines(e.notes).forEach(function (l) { sN.appendChild(el("div", "cs-note", l)); });
+    }
+
+    var wrap = el("div"); wrap.appendChild(doc); return wrap;
   }
 
   // ---- ward council agenda (one page, assignments up top) ----
