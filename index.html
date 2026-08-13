@@ -456,6 +456,7 @@
     html, body { background: #fff !important; height: auto !important; }
     /* hide everything except the sheet overlay content */
     .sync-pill, .sheet-toolbar, .wrap, .hp-overlay { display: none !important; }
+    [data-noprint] { display: none !important; }
     .sheet-overlay {
       position: static !important; background: #fff !important;
       overflow: visible !important; height: auto !important; min-height: 0 !important; display: block !important;
@@ -1480,6 +1481,10 @@
     var top = el("div", "top");
     top.appendChild(el("h1", null, "Pioneer Farms"));
     top.appendChild(el("div", "sub", "ward operations"));
+    var exp = el("button", "btn-ghost", "\u25a4 Callings this month");
+    exp.style.marginTop = "8px";
+    exp.onclick = function () { openMonthlyCallings(); };
+    top.appendChild(exp);
     return top;
   }
   function tabBar() {
@@ -3816,6 +3821,147 @@
       });
       return wrap;
     }
+    currentSheet = { type: "overview", data: null };
+    openSheet(build());
+  }
+
+  // ---- Monthly callings export -------------------------------------------
+  // Merges what was read from the sacrament pulpit (releases + sustainings)
+  // with the bishopric callings pipeline, for one calendar month.
+  var monthlyPick = null; // "YYYY-MM"; null = default to the current month
+
+  function monthKey(iso) { return (iso || "").slice(0, 7); }
+  function monthLabel(ym) {
+    if (!ym) return "";
+    var d = new Date(ym + "-01T12:00:00");
+    return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  }
+  // Every month that has any calling/release activity, newest first.
+  function monthsWithActivity() {
+    var set = {};
+    (state.weeks || []).forEach(function (w) {
+      var has = (w.releases || []).some(function (r) { return r.name || r.calling; })
+             || (w.callings || []).some(function (r) { return r.name || r.calling; });
+      if (has && w.date) set[monthKey(w.date)] = 1;
+    });
+    (state.bishopric || []).forEach(function (m) {
+      var has = (m.callings || []).some(function (c) { return c.name || c.calling; });
+      if (has && m.date) set[monthKey(m.date)] = 1;
+    });
+    var cur = todayISO().slice(0, 7);
+    set[cur] = 1; // always offer the current month
+    return Object.keys(set).sort().reverse();
+  }
+
+  // Pull merged rows for one month. Returns { released:[], sustained:[], pipeline:[] }.
+  // released/sustained come from the pulpit record; pipeline is anything in the
+  // bishopric flow that hasn't yet been sustained/set apart (i.e. still in motion).
+  function collectMonthlyCallings(ym) {
+    var released = [], sustained = [], pipeline = [];
+    var relSeen = {}, susSeen = {};
+    function key(name, calling) {
+      return normalize(name) + "|" + normalize(calling);
+    }
+    (state.weeks || []).forEach(function (w) {
+      if (monthKey(w.date) !== ym) return;
+      (w.releases || []).forEach(function (r) {
+        if (!(r.name || r.calling)) return;
+        var k = key(r.name, r.calling);
+        if (relSeen[k]) return; relSeen[k] = 1;
+        released.push({ name: r.name || "", calling: r.calling || "", date: w.date });
+      });
+      (w.callings || []).forEach(function (r) {
+        if (!(r.name || r.calling)) return;
+        var k = key(r.name, r.calling);
+        if (susSeen[k]) return; susSeen[k] = 1;
+        sustained.push({ name: r.name || "", calling: r.calling || "", date: w.date });
+      });
+    });
+    (state.bishopric || []).forEach(function (m) {
+      if (monthKey(m.date) !== ym) return;
+      (m.callings || []).forEach(function (c) {
+        if (!(c.name || c.calling)) return;
+        var st = c.status || "consider";
+        var k = key(c.name, c.calling);
+        // If the pulpit record already shows it sustained/released, don't
+        // duplicate it in the pipeline list.
+        if (st === "sustained" || st === "set apart") { if (susSeen[k]) return; }
+        pipeline.push({ name: c.name || "", calling: c.calling || "", status: st, date: m.date });
+      });
+    });
+    function bydate(a, b) { return (a.date || "").localeCompare(b.date || ""); }
+    released.sort(bydate); sustained.sort(bydate);
+    var order = { "consider":0, "approved":1, "extended":2, "sustained":3, "set apart":4 };
+    pipeline.sort(function (a, b) {
+      var d = (order[a.status]||0) - (order[b.status]||0);
+      return d !== 0 ? d : bydate(a, b);
+    });
+    return { released: released, sustained: sustained, pipeline: pipeline };
+  }
+
+  function openMonthlyCallings() {
+    var months = monthsWithActivity();
+    if (!monthlyPick || months.indexOf(monthlyPick) === -1) {
+      monthlyPick = todayISO().slice(0, 7);
+      if (months.indexOf(monthlyPick) === -1 && months.length) monthlyPick = months[0];
+    }
+
+    function build() {
+      var data = collectMonthlyCallings(monthlyPick);
+      var wrap = el("div");
+      wrap.appendChild(el("div", "cs-title", "Callings \u2014 Monthly"));
+      wrap.appendChild(el("div", "cs-sub", WARD));
+      wrap.appendChild(el("div", "cs-date", monthLabel(monthlyPick)));
+
+      // month switcher (hidden in print via cs-toolbar-ish inline styling)
+      if (months.length > 1) {
+        var picker = el("div");
+        picker.className = "monthpick";
+        picker.setAttribute("data-noprint", "1");
+        picker.style.cssText = "display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:8px 0 2px;";
+        months.forEach(function (ym) {
+          var b = el("button", "btn-ghost", monthLabel(ym));
+          b.style.cssText = "font-size:12px;padding:5px 9px;" + (ym === monthlyPick ? "font-weight:800;text-decoration:underline;" : "");
+          b.onclick = function () {
+            monthlyPick = ym;
+            var host = document.getElementById("sheetDoc");
+            host.innerHTML = ""; host.appendChild(build());
+          };
+          picker.appendChild(b);
+        });
+        wrap.appendChild(picker);
+      }
+      wrap.appendChild(el("hr", "cs-hrule"));
+
+      var any = data.released.length || data.sustained.length || data.pipeline.length;
+      if (!any) {
+        wrap.appendChild(el("div", "cs-note", "No callings or releases recorded for " + monthLabel(monthlyPick) + "."));
+        return wrap;
+      }
+
+      function nameLine(r) { return r.calling ? (r.name + " \u2014 " + r.calling) : (r.name || r.calling); }
+      function section(title, rows, withStage) {
+        if (!rows.length) return;
+        var s = el("div", "fu-person");
+        s.appendChild(el("div", "cs-h", title + "  (" + rows.length + ")"));
+        rows.forEach(function (r) {
+          var line = el("div", "cs-checkline");
+          line.appendChild(el("span", "cs-box", "\u25a1"));
+          var txt = nameLine(r);
+          if (withStage && r.status) txt += "   \u00b7 " + r.status;
+          txt += "   \u00b7 " + fmtShort(r.date);
+          line.appendChild(el("span", null, txt));
+          s.appendChild(line);
+        });
+        wrap.appendChild(s);
+      }
+
+      section("Sustained (read from the pulpit)", data.sustained, false);
+      section("Released (read from the pulpit)", data.released, false);
+      section("In the pipeline (not yet sustained)", data.pipeline, true);
+      return wrap;
+    }
+
     currentSheet = { type: "overview", data: null };
     openSheet(build());
   }
