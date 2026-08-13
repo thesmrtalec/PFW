@@ -615,7 +615,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.2.00";
+  var APP_VERSION = "Pioneer Farms v1.3.00";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -1475,16 +1475,15 @@
     row.appendChild(tool("P", "Priests Quorum", "lessons & activities", function () {
       view = { tab: "priests", screen: "list" }; render();
     }));
+    row.appendChild(tool("\u25a4", "Callings this month", "releases & sustainings", function () {
+      openMonthlyCallings();
+    }));
     return row;
   }
   function header() {
     var top = el("div", "top");
     top.appendChild(el("h1", null, "Pioneer Farms"));
     top.appendChild(el("div", "sub", "ward operations"));
-    var exp = el("button", "btn-ghost", "\u25a4 Callings this month");
-    exp.style.marginTop = "8px";
-    exp.onclick = function () { openMonthlyCallings(); };
-    top.appendChild(exp);
     return top;
   }
   function tabBar() {
