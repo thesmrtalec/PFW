@@ -1285,6 +1285,30 @@
   function openAssignments() {
     return state.assignments.filter(function (a) { return a.status !== "done"; });
   }
+  // Callings still in flight: every bishopric-meeting calling that has a name or
+  // role and hasn't reached "set apart" yet — the calling's equivalent of an open
+  // assignment. Deduped across meetings by person+role, keeping the furthest-along
+  // status, so a calling worked over several weeks shows once at its latest stage.
+  function callingsInFlight() {
+    var seen = {}, out = [];
+    var RANK = { "consider": 0, "approved": 1, "extended": 2, "sustained": 3, "set apart": 4 };
+    (state.bishopric || []).forEach(function (m) {
+      (m.callings || []).forEach(function (c) {
+        if (!c.name && !c.calling) return;
+        var status = c.status || "consider";
+        if (status === "set apart") return; // complete — nothing to follow up
+        var key = (c.name || "").trim().toLowerCase() + "|" + (c.calling || "").trim().toLowerCase();
+        if (seen[key] != null) {
+          var ex = out[seen[key]];
+          if ((RANK[status] || 0) > (RANK[ex.status] || 0)) ex.status = status;
+          return;
+        }
+        seen[key] = out.length;
+        out.push({ name: c.name || "", calling: c.calling || "", status: status });
+      });
+    });
+    return out;
+  }
   function assignmentsForMeeting(mId) {
     // open ones (carried) + any made in this meeting (even if done, so you can see closure)
     return state.assignments.filter(function (a) {
@@ -2214,14 +2238,15 @@
     var doc = document.createDocumentFragment();
     var cs = el("div", "cs");
     doc.appendChild(cs);
-    cs.appendChild(el("div", "cs-title", "Assignments \u2014 Follow-Up"));
+    cs.appendChild(el("div", "cs-title", "Assignments & Callings \u2014 Follow-Up"));
     cs.appendChild(el("div", "cs-sub", WARD + "  \u00b7  from meeting " + fmtShort(m.date)));
     cs.appendChild(el("div", "cs-date", "Sent " + fmtDate(todayISO())));
 
     // gather all still-open assignments, group by person
     var open = openAssignments();
-    if (!open.length) {
-      cs.appendChild(el("div", "cs-note", "No open assignments. Everything\u2019s closed out \u2014 nice work."));
+    var flight = callingsInFlight();
+    if (!open.length && !flight.length) {
+      cs.appendChild(el("div", "cs-note", "No open assignments or callings in progress. Everything\u2019s closed out \u2014 nice work."));
       var w0 = el("div"); w0.appendChild(doc); return w0;
     }
     var byPerson = {};
@@ -2233,21 +2258,42 @@
     });
     order.sort(function (a, b) { if (a === "Unassigned") return 1; if (b === "Unassigned") return -1; return a.localeCompare(b); });
 
-    order.forEach(function (name) {
-      var block = el("div", "fu-person");
-      block.appendChild(el("div", "fu-name", name));
-      byPerson[name].forEach(function (a) {
+    if (open.length) {
+      order.forEach(function (name) {
+        var block = el("div", "fu-person");
+        block.appendChild(el("div", "fu-name", name));
+        byPerson[name].forEach(function (a) {
+          var item = el("div", "fu-item");
+          item.appendChild(el("span", "fu-box", "\u25a1"));
+          var t = el("span");
+          t.appendChild(document.createTextNode(a.what || "(assignment)"));
+          if (a.meetingId === m.id) t.appendChild(el("span", "fu-new", "new"));
+          else { var fage = assignmentAge(a.dateMade); if (fage) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + fage + ")")); } }
+          item.appendChild(t);
+          block.appendChild(item);
+        });
+        cs.appendChild(block);
+      });
+    }
+
+    // callings still moving through the pipeline — carried until set apart
+    if (flight.length) {
+      var sK = el("div", "cs-sec");
+      sK.style.marginTop = open.length ? "6px" : "0";
+      sK.appendChild(el("div", "cs-h", "Callings in Progress"));
+      sK.appendChild(el("hr", "cs-hrule"));
+      flight.forEach(function (c) {
         var item = el("div", "fu-item");
         item.appendChild(el("span", "fu-box", "\u25a1"));
         var t = el("span");
-        t.appendChild(document.createTextNode(a.what || "(assignment)"));
-        if (a.meetingId === m.id) t.appendChild(el("span", "fu-new", "new"));
-        else { var fage = assignmentAge(a.dateMade); if (fage) { t.appendChild(document.createTextNode("  ")); t.appendChild(el("span", "cs-topic", "(" + fage + ")")); } }
+        t.appendChild(document.createTextNode((c.calling || "\u2014") + (c.name ? " \u2014 " + c.name : "")));
+        t.appendChild(document.createTextNode("  "));
+        t.appendChild(el("span", "cs-topic", "(" + c.status + ")"));
         item.appendChild(t);
-        block.appendChild(item);
+        sK.appendChild(item);
       });
-      cs.appendChild(block);
-    });
+      cs.appendChild(sK);
+    }
 
     appendClerkCapture(cs, m);
 
