@@ -1285,29 +1285,17 @@
   function openAssignments() {
     return state.assignments.filter(function (a) { return a.status !== "done"; });
   }
-  // Callings still in flight: every bishopric-meeting calling that has a name or
-  // role and hasn't reached "set apart" yet — the calling's equivalent of an open
-  // assignment. Deduped across meetings by person+role, keeping the furthest-along
-  // status, so a calling worked over several weeks shows once at its latest stage.
-  function callingsInFlight() {
-    var seen = {}, out = [];
-    var RANK = { "consider": 0, "approved": 1, "extended": 2, "sustained": 3, "set apart": 4 };
-    (state.bishopric || []).forEach(function (m) {
-      (m.callings || []).forEach(function (c) {
-        if (!c.name && !c.calling) return;
-        var status = c.status || "consider";
-        if (status === "set apart") return; // complete — nothing to follow up
-        var key = (c.name || "").trim().toLowerCase() + "|" + (c.calling || "").trim().toLowerCase();
-        if (seen[key] != null) {
-          var ex = out[seen[key]];
-          if ((RANK[status] || 0) > (RANK[ex.status] || 0)) ex.status = status;
-          return;
-        }
-        seen[key] = out.length;
-        out.push({ name: c.name || "", calling: c.calling || "", status: status });
-      });
+  // Callings from THIS meeting that have a name or role — the follow-up sheet is
+  // "from meeting [date]", so it shows that day's callings, not a running sweep.
+  // Set-apart ones drop off (complete). No cross-meeting dedup: one meeting, as entered.
+  function callingsInFlight(m) {
+    if (!m) return [];
+    return (m.callings || []).filter(function (c) {
+      if (!c.name && !c.calling) return false;
+      return (c.status || "consider") !== "set apart";
+    }).map(function (c) {
+      return { name: c.name || "", calling: c.calling || "", status: c.status || "consider" };
     });
-    return out;
   }
   function assignmentsForMeeting(mId) {
     // open ones (carried) + any made in this meeting (even if done, so you can see closure)
@@ -2244,7 +2232,7 @@
 
     // gather all still-open assignments, group by person
     var open = openAssignments();
-    var flight = callingsInFlight();
+    var flight = callingsInFlight(m);
     if (!open.length && !flight.length) {
       cs.appendChild(el("div", "cs-note", "No open assignments or callings in progress. Everything\u2019s closed out \u2014 nice work."));
       var w0 = el("div"); w0.appendChild(doc); return w0;
