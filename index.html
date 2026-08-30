@@ -615,7 +615,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.3.00";
+  var APP_VERSION = "Pioneer Farms v1.4.00";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -4297,6 +4297,549 @@
       if (r.data && r.data.session) { currentUser = r.data.session.user; bootApp(); }
       else renderLogin();
     }).catch(function () { renderLogin(); });
+  })();
+
+  // ============================================================================
+  //  WebMCP / Site Tools layer  (Pioneer Farms v1.4)
+  //  ------------------------------------------------------------------------
+  //  Exposes PFW's real concepts as callable tools for the ChatGPT desktop
+  //  browser (document.modelContext.registerTool). Every tool is a thin wrapper
+  //  over the SAME state + save() + render() the human UI uses — no parallel
+  //  schema, no duplicate business logic. Reads are flagged readOnlyHint:true;
+  //  mutations return the changed record so the agent can verify what happened.
+  //
+  //  Design notes:
+  //   * Tools operate on the in-memory `state` (the source of truth). save()
+  //     debounces the Supabase push exactly as button clicks do.
+  //   * We only re-render on the list screen, to avoid clobbering a text field
+  //     the human may be editing (render() rebuilds #app). Data still updates.
+  //   * Every tool first checks readiness (signed in + initial load done) and
+  //     returns a clear error instead of silently no-op'ing.
+  //   * Destructive ops (delete/clear) are separate, single-record, and require
+  //     an explicit id — no bulk-wipe tool. ChatGPT's own per-call safety
+  //     review sits on top of this.
+  // ============================================================================
+  (function initWebMCP() {
+    var mc = (typeof document !== "undefined") && document.modelContext;
+    if (!mc || typeof mc.registerTool !== "function") return; // not in a WebMCP host — human UI unaffected
+
+    // ---- shared helpers -----------------------------------------------------
+    function ready() { return !!(currentUser && dataLoaded); }
+    function notReady() { return { ok: false, error: "PFW is not loaded yet. Sign in to the app in this browser and let it finish loading, then try again." }; }
+    function ok(obj) { obj = obj || {}; obj.ok = true; return obj; }
+    function err(msg) { return { ok: false, error: msg }; }
+
+    // Re-render only when it's safe (list screen). On an open editor we skip the
+    // repaint so we don't wipe an in-progress text field; the data is still live
+    // and will show the moment the human navigates or the editor re-reads state.
+    function safeRender() { if (view.screen === "list") { try { render(); } catch (e) {} } }
+
+    // Resolve a meeting by explicit id, exact ISO date, or a fuzzy selector.
+    // selector: "next" (nearest upcoming, else nearest past), "nearest" (same),
+    // or an ISO date string. Returns the meeting object or null.
+    function pickMeeting(coll, o) {
+      o = o || {};
+      if (o.id) return coll.filter(function (m) { return m.id === o.id; })[0] || null;
+      if (o.date) return coll.filter(function (m) { return m.date === o.date; })[0] || null;
+      if (!coll.length) return null;
+      var sorted = coll.slice().sort(function (a, b) { return (a.date || "").localeCompare(b.date || ""); });
+      var upcoming = sorted.filter(function (m) { return !isPast(m.date); });
+      if (upcoming.length) return upcoming[0];         // nearest upcoming
+      return sorted[sorted.length - 1];                // else most recent past
+    }
+
+    function scrubAssignment(a) {
+      return { id: a.id, assignee: a.who || "", task: a.what || "", status: a.status || "open",
+               date_made: a.dateMade || null, date_done: a.dateDone || null, meeting_id: a.meetingId || null };
+    }
+    function scrubCounsel(c) { return { id: c.id, name: c.name || "", note: c.note || "" }; }
+    function scrubCalling(c) { return { id: c.id, name: c.name || "", calling: c.calling || "", status: c.status || "consider" }; }
+
+    // Compact view of a bishopric meeting — only the fields an agent needs.
+    function viewBishopric(m) {
+      if (!m) return null;
+      return {
+        id: m.id, date: m.date,
+        opening_thought: m.thought || "",
+        moveins: m.moveins || "",
+        ministering: m.ministering || "",
+        ordinances: m.ordinances || "",
+        notes: m.notes || "",
+        sent: !!m.sentAgenda,
+        counsel: (m.counsel || []).map(scrubCounsel),
+        callings: (m.callings || []).map(scrubCalling)
+      };
+    }
+    function viewCouncil(m) {
+      if (!m) return null;
+      return {
+        id: m.id, date: m.date,
+        instruction: m.instruction || "",
+        moveins: m.moveins || "",
+        live: m.live || "", care: m.care || "", invite: m.invite || "", unite: m.unite || "",
+        coordination: m.coordination || "",
+        notes: m.notes || "",
+        sent: !!m.sentAgenda,
+        counsel: (m.counsel || []).map(scrubCounsel)
+      };
+    }
+    function viewSacrament(m) {
+      if (!m) return null;
+      return {
+        id: m.id, date: m.date, conducting: m.conducting || "",
+        opening_hymn: m.openingHymn || "", sacrament_hymn: m.sacramentHymn || "",
+        rest_hymn: m.restHymn || "", closing_hymn: m.closingHymn || "",
+        invocation: m.invocation || "", benediction: m.benediction || "",
+        musical: m.musical || "", testimony_meeting: !!m.testimony,
+        youth_speaker: m.youthSpeaker || "", youth_topic: m.youthTopic || "",
+        announcements: m.announcements || "",
+        speakers: (m.speakers || []).map(function (s) { return { id: s.id, name: s.name || "", topic: s.topic || "" }; })
+      };
+    }
+
+    // Small registration helper so each tool reads cleanly.
+    function tool(name, description, properties, required, readOnly, execute) {
+      mc.registerTool({
+        name: name,
+        description: description,
+        inputSchema: { type: "object", properties: properties || {}, required: required || [], additionalProperties: false },
+        annotations: { readOnlyHint: !!readOnly },
+        execute: function (args) {
+          args = args || {};
+          try { return execute(args); }
+          catch (e) { return err("PFW tool error: " + (e && e.message ? e.message : String(e))); }
+        }
+      });
+    }
+
+    // =========================================================================
+    //  READ TOOLS
+    // =========================================================================
+
+    tool("get_agenda_context",
+      "Get everything needed to work a bishopric agenda for one meeting: the meeting's fields (opening thought, move-ins, ministering, ordinances, notes), the people to counsel over, the callings in the pipeline, and the OPEN follow-up assignments that carry into this meeting. Use this first when the bishop says 'let's build this week's agenda'. Pass no arguments to get the nearest upcoming bishopric meeting.",
+      { date: { type: "string", description: "ISO date (YYYY-MM-DD) of a specific bishopric meeting. Omit for the nearest upcoming one." },
+        id:   { type: "string", description: "Exact meeting id, if known. Overrides date." } },
+      [], true,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.bishopric, a);
+        if (!m) return err("No bishopric meeting found" + (a.date ? " for " + a.date : "") + ". Use create_bishopric_meeting to start one.");
+        return ok({
+          meeting: viewBishopric(m),
+          open_followups: assignmentsForMeeting(m.id).map(scrubAssignment),
+          note: "counsel[], callings[], and open_followups[] each carry their own item ids for update/remove tools."
+        });
+      });
+
+    tool("list_meetings",
+      "List meeting dates and ids across sacrament, bishopric, and ward council, so a specific meeting can be resolved (e.g. to turn 'this week' into an id). Returns upcoming first.",
+      { type: { type: "string", enum: ["sacrament", "bishopric", "council", "all"], description: "Which set to list. Default 'all'." } },
+      [], true,
+      function (a) {
+        if (!ready()) return notReady();
+        function rows(coll) {
+          return coll.slice()
+            .sort(function (x, y) { return (x.date || "").localeCompare(y.date || ""); })
+            .map(function (m) { return { id: m.id, date: m.date, past: isPast(m.date) }; });
+        }
+        var t = a.type || "all";
+        var out = {};
+        if (t === "sacrament" || t === "all") out.sacrament = rows(state.weeks);
+        if (t === "bishopric" || t === "all") out.bishopric = rows(state.bishopric);
+        if (t === "council"   || t === "all") out.council   = rows(state.council);
+        return ok(out);
+      });
+
+    tool("get_open_followups",
+      "List open (not-yet-done) follow-up assignments. These carry meeting to meeting until marked complete. 'bishopric' and 'council' are separate pools.",
+      { pool: { type: "string", enum: ["bishopric", "council", "both"], description: "Which assignment pool. Default 'bishopric'." } },
+      [], true,
+      function (a) {
+        if (!ready()) return notReady();
+        var pool = a.pool || "bishopric";
+        var out = {};
+        if (pool === "bishopric" || pool === "both") out.bishopric = openAssignments().map(scrubAssignment);
+        if (pool === "council"   || pool === "both") out.council   = openCouncilAssignments().map(scrubAssignment);
+        return ok(out);
+      });
+
+    tool("get_sacrament_meeting",
+      "Get the full plan for one sacrament meeting: conducting, the four hymns, prayers, musical number, youth speaker, speakers, announcements. Omit arguments for the nearest upcoming meeting.",
+      { date: { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:   { type: "string", description: "Exact meeting id. Overrides date." } },
+      [], true,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.weeks, a);
+        if (!m) return err("No sacrament meeting found" + (a.date ? " for " + a.date : "") + ".");
+        return ok({ meeting: viewSacrament(m) });
+      });
+
+    tool("get_council_agenda",
+      "Get one ward council agenda: instruction, the four missions (live/care/invite/unite), coordination, move-ins, counsel list, notes. Omit arguments for the nearest upcoming council meeting.",
+      { date: { type: "string", description: "ISO date of the council meeting. Omit for nearest upcoming." },
+        id:   { type: "string", description: "Exact meeting id. Overrides date." } },
+      [], true,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.council, a);
+        if (!m) return err("No ward council meeting found" + (a.date ? " for " + a.date : "") + ".");
+        return ok({ meeting: viewCouncil(m), open_followups: councilAssignmentsForMeeting(m.id).map(scrubAssignment) });
+      });
+
+    // =========================================================================
+    //  WRITE TOOLS — bishopric agenda
+    // =========================================================================
+
+    var BISHOPRIC_FIELDS = { opening_thought: "thought", moveins: "moveins", ministering: "ministering", ordinances: "ordinances", notes: "notes" };
+
+    tool("set_bishopric_field",
+      "Set one free-text field on a bishopric meeting. Fields: opening_thought (the line that opens the agenda), moveins, ministering, ordinances, notes. Overwrites the field with the given value.",
+      { field: { type: "string", enum: Object.keys(BISHOPRIC_FIELDS), description: "Which field to set." },
+        value: { type: "string", description: "New text for the field." },
+        date:  { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:    { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["field", "value"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var key = BISHOPRIC_FIELDS[a.field];
+        if (!key) return err("Unknown field '" + a.field + "'. Valid: " + Object.keys(BISHOPRIC_FIELDS).join(", ") + ".");
+        var m = pickMeeting(state.bishopric, a);
+        if (!m) return err("No bishopric meeting found. Create one first with create_bishopric_meeting.");
+        m[key] = a.value; save(); safeRender();
+        return ok({ updated_field: a.field, meeting: viewBishopric(m) });
+      });
+
+    tool("add_person_to_counsel",
+      "Add a person (individual or family) to the bishopric meeting's 'to counsel over' list, with an optional note. Returns the new item's id.",
+      { name: { type: "string", description: "Person or family name." },
+        note: { type: "string", description: "Optional note / context." },
+        date: { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:   { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["name"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.bishopric, a);
+        if (!m) return err("No bishopric meeting found. Create one first.");
+        if (!m.counsel) m.counsel = [];
+        var item = { id: uid(), name: a.name, note: a.note || "" };
+        m.counsel.push(item); save(); safeRender();
+        return ok({ added: scrubCounsel(item), meeting_id: m.id });
+      });
+
+    tool("update_counsel_note",
+      "Change the name or note on one counsel-list item, by its item id.",
+      { item_id: { type: "string", description: "The counsel item's id (from get_agenda_context)." },
+        name:    { type: "string", description: "New name. Omit to leave unchanged." },
+        note:    { type: "string", description: "New note. Omit to leave unchanged." } },
+      ["item_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var found = null, mtg = null;
+        state.bishopric.forEach(function (m) { (m.counsel || []).forEach(function (c) { if (c.id === a.item_id) { found = c; mtg = m; } }); });
+        if (!found) return err("No counsel item with id '" + a.item_id + "'.");
+        if (typeof a.name === "string") found.name = a.name;
+        if (typeof a.note === "string") found.note = a.note;
+        save(); safeRender();
+        return ok({ updated: scrubCounsel(found), meeting_id: mtg.id });
+      });
+
+    tool("remove_from_counsel",
+      "Remove one person from a bishopric meeting's counsel list, by item id. Single record only.",
+      { item_id: { type: "string", description: "The counsel item's id." } },
+      ["item_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var mtg = null, removed = null;
+        state.bishopric.forEach(function (m) {
+          var keep = []; (m.counsel || []).forEach(function (c) { if (c.id === a.item_id) { removed = c; mtg = m; } else keep.push(c); });
+          if (removed && mtg === m) m.counsel = keep;
+        });
+        if (!removed) return err("No counsel item with id '" + a.item_id + "'.");
+        save(); safeRender();
+        return ok({ removed: scrubCounsel(removed), meeting_id: mtg.id });
+      });
+
+    // ---- callings pipeline --------------------------------------------------
+    var CALLING_STAGES = ["consider", "approved", "extended", "sustained", "set apart"];
+
+    tool("add_calling",
+      "Add a calling to a bishopric meeting's callings pipeline. Starts at stage 'consider' unless a status is given.",
+      { calling: { type: "string", description: "The calling / role (e.g. 'Primary teacher')." },
+        name:    { type: "string", description: "Person's name, if known." },
+        status:  { type: "string", enum: CALLING_STAGES, description: "Pipeline stage. Default 'consider'." },
+        date:    { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:      { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["calling"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.bishopric, a);
+        if (!m) return err("No bishopric meeting found. Create one first.");
+        if (a.status && CALLING_STAGES.indexOf(a.status) === -1) return err("Invalid status. Valid: " + CALLING_STAGES.join(" \u2192 ") + ".");
+        if (!m.callings) m.callings = [];
+        var item = { id: uid(), name: a.name || "", calling: a.calling, status: a.status || "consider" };
+        m.callings.push(item); save(); safeRender();
+        return ok({ added: scrubCalling(item), meeting_id: m.id });
+      });
+
+    tool("update_calling_status",
+      "Move a calling along the pipeline (consider \u2192 approved \u2192 extended \u2192 sustained \u2192 set apart), or change its name/role, by item id.",
+      { item_id: { type: "string", description: "The calling item's id." },
+        status:  { type: "string", enum: CALLING_STAGES, description: "New pipeline stage." },
+        name:    { type: "string", description: "New person name. Omit to leave unchanged." },
+        calling: { type: "string", description: "New calling/role text. Omit to leave unchanged." } },
+      ["item_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        if (a.status && CALLING_STAGES.indexOf(a.status) === -1) return err("Invalid status. Valid: " + CALLING_STAGES.join(" \u2192 ") + ".");
+        var found = null, mtg = null;
+        state.bishopric.forEach(function (m) { (m.callings || []).forEach(function (c) { if (c.id === a.item_id) { found = c; mtg = m; } }); });
+        if (!found) return err("No calling item with id '" + a.item_id + "'.");
+        if (typeof a.status === "string") found.status = a.status;
+        if (typeof a.name === "string") found.name = a.name;
+        if (typeof a.calling === "string") found.calling = a.calling;
+        save(); safeRender();
+        return ok({ updated: scrubCalling(found), meeting_id: mtg.id });
+      });
+
+    // ---- follow-up assignments (the carry-forward engine) -------------------
+
+    tool("add_followup",
+      "Add a follow-up assignment (who / what). It carries meeting to meeting until marked complete. Attributed to the given meeting as its origin.",
+      { assignee: { type: "string", description: "Who is responsible." },
+        task:     { type: "string", description: "What they're to do." },
+        pool:     { type: "string", enum: ["bishopric", "council"], description: "Which pool. Default 'bishopric'." },
+        date:     { type: "string", description: "ISO date of the origin meeting. Omit for nearest upcoming in that pool." },
+        id:       { type: "string", description: "Exact origin meeting id. Overrides date." } },
+      ["assignee", "task"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var pool = a.pool || "bishopric";
+        var coll = pool === "council" ? state.council : state.bishopric;
+        var m = pickMeeting(coll, a);
+        var mid = m ? m.id : null;
+        if (pool === "council") addCouncilAssignment(a.assignee, a.task, mid);
+        else addAssignment(a.assignee, a.task, mid);
+        safeRender();
+        var poolArr = pool === "council" ? state.councilAssignments : state.assignments;
+        var made = poolArr[poolArr.length - 1];
+        return ok({ added: scrubAssignment(made), pool: pool, origin_meeting_id: mid });
+      });
+
+    tool("mark_followup_complete",
+      "Mark a follow-up assignment done (or reopen it) by its id. Toggles: completing sets it done with today's date; calling again reopens it.",
+      { assignment_id: { type: "string", description: "The assignment's id." },
+        pool: { type: "string", enum: ["bishopric", "council"], description: "Which pool the assignment is in. Default 'bishopric'." } },
+      ["assignment_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var pool = a.pool || "bishopric";
+        var arr = pool === "council" ? state.councilAssignments : state.assignments;
+        var found = arr.filter(function (x) { return x.id === a.assignment_id; })[0];
+        if (!found) return err("No " + pool + " assignment with id '" + a.assignment_id + "'.");
+        if (pool === "council") toggleCouncilAssignment(a.assignment_id); else toggleAssignment(a.assignment_id);
+        safeRender();
+        return ok({ assignment: scrubAssignment(found), pool: pool });
+      });
+
+    tool("reassign_followup",
+      "Change who a follow-up is assigned to and/or its task text, by id. Use this for 'move X off this, put Y on it'.",
+      { assignment_id: { type: "string", description: "The assignment's id." },
+        assignee: { type: "string", description: "New assignee. Omit to leave unchanged." },
+        task:     { type: "string", description: "New task text. Omit to leave unchanged." },
+        pool:     { type: "string", enum: ["bishopric", "council"], description: "Which pool. Default 'bishopric'." } },
+      ["assignment_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var pool = a.pool || "bishopric";
+        var arr = pool === "council" ? state.councilAssignments : state.assignments;
+        var found = arr.filter(function (x) { return x.id === a.assignment_id; })[0];
+        if (!found) return err("No " + pool + " assignment with id '" + a.assignment_id + "'.");
+        if (typeof a.assignee === "string") found.who = a.assignee;
+        if (typeof a.task === "string") found.what = a.task;
+        save(); safeRender();
+        return ok({ assignment: scrubAssignment(found), pool: pool });
+      });
+
+    // =========================================================================
+    //  WRITE TOOLS — sacrament meeting
+    // =========================================================================
+
+    var SACRAMENT_FIELDS = {
+      conducting: "conducting", opening_hymn: "openingHymn", sacrament_hymn: "sacramentHymn",
+      rest_hymn: "restHymn", closing_hymn: "closingHymn", invocation: "invocation",
+      benediction: "benediction", musical: "musical", youth_speaker: "youthSpeaker",
+      youth_topic: "youthTopic", announcements: "announcements"
+    };
+
+    tool("set_sacrament_field",
+      "Set one field on a sacrament meeting. Fields: conducting, opening_hymn, sacrament_hymn, rest_hymn, closing_hymn, invocation, benediction, musical, youth_speaker, youth_topic, announcements. Hymns accept the number and/or title as free text.",
+      { field: { type: "string", enum: Object.keys(SACRAMENT_FIELDS), description: "Which field to set." },
+        value: { type: "string", description: "New value." },
+        date:  { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:    { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["field", "value"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var key = SACRAMENT_FIELDS[a.field];
+        if (!key) return err("Unknown field '" + a.field + "'. Valid: " + Object.keys(SACRAMENT_FIELDS).join(", ") + ".");
+        var m = pickMeeting(state.weeks, a);
+        if (!m) return err("No sacrament meeting found for that date.");
+        m[key] = a.value; save(); safeRender();
+        return ok({ updated_field: a.field, meeting: viewSacrament(m) });
+      });
+
+    tool("add_speaker",
+      "Add a speaker (name + topic) to a sacrament meeting. Returns the new speaker's id.",
+      { name:  { type: "string", description: "Speaker's name." },
+        topic: { type: "string", description: "Their topic. Optional." },
+        date:  { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:    { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["name"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.weeks, a);
+        if (!m) return err("No sacrament meeting found for that date.");
+        if (!m.speakers) m.speakers = [];
+        var sp = { id: uid(), name: a.name, topic: a.topic || "" };
+        m.speakers.push(sp); save(); safeRender();
+        return ok({ added: { id: sp.id, name: sp.name, topic: sp.topic }, meeting_id: m.id });
+      });
+
+    tool("update_speaker",
+      "Change a speaker's name or topic by id, or remove them (set remove:true).",
+      { speaker_id: { type: "string", description: "The speaker's id." },
+        name:  { type: "string", description: "New name. Omit to leave unchanged." },
+        topic: { type: "string", description: "New topic. Omit to leave unchanged." },
+        remove: { type: "boolean", description: "Set true to remove this speaker." } },
+      ["speaker_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var mtg = null, sp = null;
+        state.weeks.forEach(function (m) { (m.speakers || []).forEach(function (s) { if (s.id === a.speaker_id) { sp = s; mtg = m; } }); });
+        if (!sp) return err("No speaker with id '" + a.speaker_id + "'.");
+        if (a.remove === true) {
+          mtg.speakers = mtg.speakers.filter(function (s) { return s.id !== a.speaker_id; });
+          save(); safeRender();
+          return ok({ removed: { id: a.speaker_id }, meeting_id: mtg.id });
+        }
+        if (typeof a.name === "string") sp.name = a.name;
+        if (typeof a.topic === "string") sp.topic = a.topic;
+        save(); safeRender();
+        return ok({ updated: { id: sp.id, name: sp.name, topic: sp.topic }, meeting_id: mtg.id });
+      });
+
+    tool("set_testimony_meeting",
+      "Mark a sacrament meeting as a fast & testimony meeting (or not). When true, speakers aren't expected.",
+      { value: { type: "boolean", description: "true = testimony meeting." },
+        date:  { type: "string", description: "ISO date of the meeting. Omit for nearest upcoming." },
+        id:    { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["value"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.weeks, a);
+        if (!m) return err("No sacrament meeting found for that date.");
+        m.testimony = !!a.value; save(); safeRender();
+        return ok({ meeting: viewSacrament(m) });
+      });
+
+    // =========================================================================
+    //  WRITE TOOLS — ward council
+    // =========================================================================
+
+    var COUNCIL_FIELDS = {
+      instruction: "instruction", moveins: "moveins", live: "live", care: "care",
+      invite: "invite", unite: "unite", coordination: "coordination", notes: "notes"
+    };
+
+    tool("set_council_field",
+      "Set one field on a ward council agenda. Fields: instruction (bishop's focus), moveins, live, care, invite, unite (the four missions), coordination, notes.",
+      { field: { type: "string", enum: Object.keys(COUNCIL_FIELDS), description: "Which field to set." },
+        value: { type: "string", description: "New text." },
+        date:  { type: "string", description: "ISO date of the council meeting. Omit for nearest upcoming." },
+        id:    { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["field", "value"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var key = COUNCIL_FIELDS[a.field];
+        if (!key) return err("Unknown field '" + a.field + "'. Valid: " + Object.keys(COUNCIL_FIELDS).join(", ") + ".");
+        var m = pickMeeting(state.council, a);
+        if (!m) return err("No ward council meeting found for that date.");
+        m[key] = a.value; save(); safeRender();
+        return ok({ updated_field: a.field, meeting: viewCouncil(m) });
+      });
+
+    tool("add_council_counsel",
+      "Add an individual or family to the ward council's counsel list, with an optional note.",
+      { name: { type: "string", description: "Person or family name." },
+        note: { type: "string", description: "Optional note." },
+        date: { type: "string", description: "ISO date of the council meeting. Omit for nearest upcoming." },
+        id:   { type: "string", description: "Exact meeting id. Overrides date." } },
+      ["name"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var m = pickMeeting(state.council, a);
+        if (!m) return err("No ward council meeting found for that date.");
+        if (!m.counsel) m.counsel = [];
+        var item = { id: uid(), name: a.name, note: a.note || "" };
+        m.counsel.push(item); save(); safeRender();
+        return ok({ added: scrubCounsel(item), meeting_id: m.id });
+      });
+
+    // =========================================================================
+    //  CREATE + DESTRUCTIVE (separate, single-record, explicit)
+    // =========================================================================
+
+    tool("create_bishopric_meeting",
+      "Create a new bishopric meeting for a date, if one doesn't already exist. Defaults to the next Sunday. Returns the new meeting (empty) ready to fill in.",
+      { date: { type: "string", description: "ISO date (YYYY-MM-DD). Omit for next Sunday." } },
+      [], false,
+      function (a) {
+        if (!ready()) return notReady();
+        if (a.date) {
+          var exists = state.bishopric.filter(function (m) { return m.date === a.date; })[0];
+          if (exists) return err("A bishopric meeting already exists for " + a.date + " (id " + exists.id + "). Use its id instead of creating a duplicate.");
+        }
+        var m = blankBishopric();
+        if (a.date) m.date = a.date;
+        state.bishopric.push(m); save(); safeRender();
+        return ok({ created: viewBishopric(m) });
+      });
+
+    tool("delete_followup",
+      "Permanently delete ONE follow-up assignment by id (not the same as marking it complete). Destructive and single-record. Prefer mark_followup_complete unless the item was created in error.",
+      { assignment_id: { type: "string", description: "The assignment's id." },
+        pool: { type: "string", enum: ["bishopric", "council"], description: "Which pool. Default 'bishopric'." } },
+      ["assignment_id"], false,
+      function (a) {
+        if (!ready()) return notReady();
+        var pool = a.pool || "bishopric";
+        var arr = pool === "council" ? state.councilAssignments : state.assignments;
+        var found = arr.filter(function (x) { return x.id === a.assignment_id; })[0];
+        if (!found) return err("No " + pool + " assignment with id '" + a.assignment_id + "'.");
+        var snapshot = scrubAssignment(found);
+        if (pool === "council") deleteCouncilAssignment(a.assignment_id); else deleteAssignment(a.assignment_id);
+        safeRender();
+        return ok({ deleted: snapshot, pool: pool });
+      });
+
+    // =========================================================================
+    //  UTILITY
+    // =========================================================================
+
+    tool("flush_to_cloud",
+      "Force any pending changes to save to the cloud immediately, rather than waiting for the debounce. Call at the end of a working session for certainty that everything persisted.",
+      {}, [], false,
+      function () {
+        if (!ready()) return notReady();
+        if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+        try { pushAll(); } catch (e) { return err("Flush failed: " + (e && e.message ? e.message : String(e))); }
+        return ok({ flushed: true });
+      });
+
+    // Console breadcrumb (harmless; helps confirm the layer registered).
+    try { console.log("[PFW] WebMCP site tools registered."); } catch (e) {}
   })();
 })();
 </script>
