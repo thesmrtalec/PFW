@@ -615,7 +615,7 @@
   "use strict";
   var KEY = "pioneerfarms-v1";
   var WARD = "Pioneer Farms Ward";
-  var APP_VERSION = "Pioneer Farms v1.4.00";
+  var APP_VERSION = "Pioneer Farms v1.4.02";
   var CONDUCTORS = ["Randy Stringham", "Kraig Webb", "Alec Stubbs"];
 
   var HYMNS = [
@@ -2431,7 +2431,7 @@
     var addWrap = el("div", "asg-add");
     var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
     whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;";
-    whoIn.setAttribute("list", "dl-council-assignees"); whoIn.setAttribute("autocomplete", "off");
+    whoIn.setAttribute("autocomplete", "off");
     var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
     whatIn.style.cssText = whoIn.style.cssText;
     var addBtn = el("button", "btn", "Add");
@@ -3304,7 +3304,7 @@
     var addWrap = el("div", "asg-add");
     var whoIn = el("input"); whoIn.type = "text"; whoIn.placeholder = "who";
     whoIn.style.cssText = "font-size:16px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;-webkit-appearance:none;background:var(--input-bg);color:var(--ink);";
-    whoIn.setAttribute("list", isCouncil ? "dl-council-assignees" : "dl-assignees");
+    if (!isCouncil) whoIn.setAttribute("list", "dl-assignees");
     whoIn.setAttribute("autocomplete", "off");
     var whatIn = el("input"); whatIn.type = "text"; whatIn.placeholder = "assignment";
     whatIn.style.cssText = whoIn.style.cssText;
