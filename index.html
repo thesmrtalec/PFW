@@ -2486,7 +2486,7 @@
 
     // ===== THE WORK OF SALVATION & EXALTATION (four missions) =====
     var zW = el("div", "zone");
-    zoneHead(zW, "Work of salvation & exaltation", "coordinate, don\u2019t report");
+    zoneHead(zW, "Work of salvation & exaltation");
     zW.appendChild(el("div", "hint", "Coordination across the four missions of the Church \u2014 what the council is doing together, not organization-by-organization status."));
     COUNCIL_MISSIONS.forEach(function (mi) {
       zW.appendChild(el("div", "sub-label", mi.title));
@@ -2820,7 +2820,6 @@
     if (anyMission) {
       var sM = el("div", "cs-sec");
       sM.appendChild(el("div", "cs-h", "Work of Salvation & Exaltation"));
-      sM.appendChild(el("div", "cs-caption", "coordinate, don\u2019t report"));
       sM.appendChild(el("hr", "cs-hrule"));
       COUNCIL_MISSIONS.forEach(function (mi) {
         if (!m[mi.key]) return;
@@ -3511,7 +3510,7 @@
     COUNCIL_MISSIONS.forEach(function (mi) {
       if (!m[mi.key]) return;
       cards.push({ kicker: "Work of salvation", title: mi.title,
-        names: lines(m[mi.key]), sub: "coordinate, don\u2019t report" });
+        names: lines(m[mi.key]) });
     });
     if (m.coordination) {
       cards.push({ kicker: "Coordination", title: "Calendar & coordination", names: lines(m.coordination) });
